@@ -1,4 +1,5 @@
 ---
+import ConsoleApp from '@components/ConsoleApp';
 import Layout from '@/Layout.astro';
 ---
 
@@ -6,4 +7,5 @@ import Layout from '@/Layout.astro';
     description="Music production portfolio and compositions."
     title="Music"
 >
+    <ConsoleApp client:only="react" />
 </Layout>

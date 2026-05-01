@@ -1,5 +1,13 @@
 ---
 import '@fontsource/geist-sans/index.css';
+import '@fontsource/ibm-plex-mono/300.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 import { ClientRouter } from 'astro:transitions';
 
 interface Props {
@@ -61,6 +69,38 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
         --color-pink: 236, 72, 153;
         --font-sans: 'Geist', system-ui, sans-serif;
         --rgb-white: 255, 255, 255;
+
+        --cn-bg: #1c1d20;
+        --cn-bg2: #16171a;
+        --cn-panel: #23252a;
+        --cn-panel2: #2c2f35;
+        --cn-border: #0e0f11;
+        --cn-border2: #34373e;
+        --cn-line: #262930;
+        --cn-text: #ecebe6;
+        --cn-text2: #c8c5bd;
+        --cn-dim: #8a8d94;
+        --cn-dim2: #5a5d65;
+
+        --cn-pBg: #13110e;
+        --cn-pBg2: #1a1814;
+        --cn-pBorder: #26221b;
+        --cn-pBorder2: #36312a;
+        --cn-pText: #ecdfc4;
+        --cn-pDim: #8c8170;
+        --cn-pDim2: #5a5447;
+
+        --cn-accent: #c97a4a;
+        --cn-accent2: #a86138;
+        --cn-accentDim: #5e3a25;
+        --cn-sage: #8aa67c;
+        --cn-sageDim: #4f6646;
+        --cn-danger: #c4564b;
+        --cn-star: #d8b15a;
+        --cn-heart: #c97a8a;
+
+        --cn-font: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+        --cn-sans: 'Inter', -apple-system, system-ui, sans-serif;
     }
 
     :focus {

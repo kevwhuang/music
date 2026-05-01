@@ -1,0 +1,19 @@
+{
+    "bpm": [
+        "128"
+    ],
+    "duration": 265,
+    "heart": false,
+    "id": "A015",
+    "key": [
+        "F minor",
+        "F Phrygian",
+        "chromatic",
+        "Eb minor"
+    ],
+    "master": true,
+    "mixdown": false,
+    "star": true,
+    "title": "Chimera",
+    "year": 2016
+}

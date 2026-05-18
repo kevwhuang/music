@@ -1,5 +1,6 @@
 ---
-import ConsoleApp from '@components/ConsoleApp';
+import Catalog from '@sections/Catalog';
+import Hero from '@sections/Hero.astro';
 import Layout from '@/Layout.astro';
 ---
 
@@ -7,5 +8,6 @@ import Layout from '@/Layout.astro';
     description="Music production portfolio and compositions."
     title="Music"
 >
-    <ConsoleApp client:only="react" />
+    <Hero />
+    <Catalog client:only="react" />
 </Layout>

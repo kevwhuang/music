@@ -16,6 +16,7 @@ interface FavoriteFilters {
 }
 
 interface PlayerState {
+    collapsed: boolean;
     duration: number;
     highpass: number;
     lowpass: number;

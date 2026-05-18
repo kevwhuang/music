@@ -1,20 +1,24 @@
 import { useEffect, useState } from 'react';
 
-import { TRACKS } from './tracks';
+import { TRACKS } from '@lib/tracks';
 
 const INITIAL: PlayerState = {
-    trackId: null,
-    position: 0,
+    collapsed: false,
     duration: 0,
-    playing: false,
-    volume: 0.78,
-    repeat: false,
-    lowpass: 1,
     highpass: 0,
+    lowpass: 1,
+    playing: false,
+    position: 0,
+    repeat: false,
+    trackId: null,
+    volume: 0.78,
 };
 
+const _global = typeof window !== 'undefined' ? window as Record<string, unknown> : {} as Record<string, unknown>;
+
 function createPlayerStore() {
-    let audio: HTMLAudioElement | null = null;
+    let audio: HTMLAudioElement | null = (_global.__player_audio as HTMLAudioElement) || null;
+    let raf: number | null = null;
 
     const restore = (): PlayerState => {
         try {
@@ -22,11 +26,14 @@ function createPlayerStore() {
             if (j && typeof j === 'object') {
                 return {
                     ...INITIAL,
-                    volume: j.volume ?? INITIAL.volume,
+                    collapsed: j.collapsed ?? false,
                     repeat: j.repeat ?? false,
+                    volume: j.volume ?? INITIAL.volume,
                 };
             }
-        } catch { /* ignore */ }
+        } catch {
+            return { ...INITIAL };
+        }
         return { ...INITIAL };
     };
 
@@ -52,11 +59,14 @@ function createPlayerStore() {
         _save() {
             try {
                 localStorage.setItem('player', JSON.stringify({
+                    collapsed: store.state.collapsed,
+                    repeat: store.state.repeat,
                     trackId: store.state.trackId,
                     volume: store.state.volume,
-                    repeat: store.state.repeat,
                 }));
-            } catch { /* ignore */ }
+            } catch {
+                return;
+            }
         },
 
         set(patch: Partial<PlayerState>) {
@@ -68,11 +78,13 @@ function createPlayerStore() {
         getAudio(): HTMLAudioElement {
             if (!audio) {
                 audio = new Audio();
+                _global.__player_audio = audio;
                 audio.volume = store.state.volume;
-                audio.addEventListener('timeupdate', () => {
+                const tick = () => {
                     store.state = { ...store.state, position: audio!.currentTime };
                     store._emit();
-                });
+                    raf = requestAnimationFrame(tick);
+                };
                 audio.addEventListener('loadedmetadata', () => {
                     store.state = { ...store.state, duration: audio!.duration };
                     store._emit();
@@ -86,12 +98,17 @@ function createPlayerStore() {
                     }
                 });
                 audio.addEventListener('pause', () => {
+                    if (raf) {
+                        cancelAnimationFrame(raf);
+                        raf = null;
+                    }
                     store.state = { ...store.state, playing: false };
                     store._emit();
                 });
                 audio.addEventListener('play', () => {
                     store.state = { ...store.state, playing: true };
                     store._emit();
+                    if (!raf) raf = requestAnimationFrame(tick);
                 });
             }
             return audio;
@@ -105,7 +122,8 @@ function createPlayerStore() {
                 else el.pause();
                 return;
             }
-            store.set({ trackId: track.id, position: 0, duration: track.duration, playing: false });
+            el.pause();
+            store.set({ trackId: track.id, position: 0, duration: track.duration, playing: true });
             el.src = track.audioUrl;
             const onReady = () => {
                 el.removeEventListener('canplay', onReady);

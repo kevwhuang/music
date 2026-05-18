@@ -1,4 +1,4 @@
-import { buildSlug, categoryFromId } from './utils';
+import { buildSlug, categoryFromId } from '@lib/utils';
 
 interface RawTrack {
     id: string;

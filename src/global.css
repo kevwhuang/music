@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+@theme {
+    --color-black: #000000;
+    --color-black-40: #00000066;
+    --color-black-60: #00000099;
+    --color-cream: #f0d7af;
+    --color-cream-20: #f0d7af33;
+    --color-cream-40: #f0d7af66;
+    --color-cream-60: #f0d7af99;
+    --color-gold: #c9a04a;
+    --color-orange-20: #f9731633;
+    --color-orange-40: #f9731666;
+    --color-orange-60: #f9731699;
+    --color-orange-80: #f97316cc;
+    --color-red: #b8524a;
+    --color-red-20: #b8524a33;
+    --color-rose: #c47888;
+    --color-sage: #8aaa72;
+    --color-sage-40: #8aaa7266;
+    --color-transparent: #00000000;
+    --color-white: #ffffff;
+    --color-white-20: #ffffff33;
+    --color-white-40: #ffffff66;
+    --color-white-60: #ffffff99;
+    --color-zinc-100: #f4f4f5;
+    --color-zinc-300: #d4d4d8;
+    --color-zinc-400: #a1a1aa;
+    --color-zinc-500: #71717a;
+    --color-zinc-700: #3f3f46;
+    --color-zinc-800: #27272a;
+    --color-zinc-900: #18181b;
+    --color-zinc-950: #09090b;
+    --font-inter: 'Inter', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --font-sans: 'Geist', system-ui, sans-serif;
+}
+
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid var(--color-orange-80);
+    outline-offset: 2px;
+}
+
+[data-scroll] {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
+}

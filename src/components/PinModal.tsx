@@ -3,8 +3,13 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { buildSlug, fmtDuration } from '@lib/utils';
 
 interface PinModalCtx {
-    open: (track: Track, kind: 'master' | 'mixdown') => void;
     close: () => void;
+    open: (track: Track, kind: 'master' | 'mixdown') => void;
+}
+
+interface Target {
+    kind: 'master' | 'mixdown';
+    track: Track;
 }
 
 const PinModalContext = createContext<PinModalCtx | null>(null);
@@ -13,19 +18,14 @@ export function usePinModal() {
     return useContext(PinModalContext)!;
 }
 
-interface Target {
-    track: Track;
-    kind: 'master' | 'mixdown';
-}
-
 export function PinModalProvider({ children }: { children: React.ReactNode }) {
     const [target, setTarget] = useState<Target | null>(null);
     const [pin, setPin] = useState('');
-    const [state, setState] = useState<'idle' | 'checking' | 'error' | 'success'>('idle');
+    const [state, setState] = useState<'checking' | 'error' | 'idle' | 'success'>('idle');
     const inputRef = useRef<HTMLInputElement>(null);
 
     const open = useCallback((track: Track, kind: 'master' | 'mixdown') => {
-        setTarget({ track, kind });
+        setTarget({ kind, track });
         setPin('');
         setState('idle');
     }, []);
@@ -62,165 +62,115 @@ export function PinModalProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <PinModalContext.Provider value={{ open, close }}>
+        <PinModalContext.Provider value={{ close, open }}>
             {children}
             {target && (
                 <PinModalChrome
-                    target={target}
+                    close={close}
+                    inputRef={inputRef}
                     pin={pin}
                     setPin={setPin}
                     state={state}
                     submit={submit}
-                    close={close}
-                    inputRef={inputRef}
+                    target={target}
                 />
             )}
         </PinModalContext.Provider>
     );
 }
 
-function PinModalChrome({
-    target, pin, setPin, state, submit, close, inputRef,
-}: {
-    target: Target;
-    pin: string;
-    setPin: (v: string) => void;
-    state: 'idle' | 'checking' | 'error' | 'success';
-    submit: (e?: React.FormEvent) => void;
+function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }: {
     close: () => void;
     inputRef: React.RefObject<HTMLInputElement | null>;
+    pin: string;
+    setPin: (v: string) => void;
+    state: 'checking' | 'error' | 'idle' | 'success';
+    submit: (e?: React.FormEvent) => void;
+    target: Target;
 }) {
     const slug = buildSlug(target.track.id, target.track.title);
     return (
-        // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
         <div
-            onClick={close}
-            style={{
-                position: 'fixed', inset: 0, zIndex: 1000,
-                background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'inherit',
-                animation: 'pinModalFadeIn .18s ease',
-            }}
+            className="pin-modal__overlay fixed inset-0 z-[1000] flex items-center justify-center"
+            aria-modal="true"
+            role="dialog"
         >
-            <style>
-                {`
-                @keyframes pinModalFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes pinModalSlide {
-                    from { opacity: 0; transform: translateY(8px) scale(.98); }
-                    to { opacity: 1; transform: none; }
-                }
-                @keyframes pinShake {
-                    0%, 100% { transform: translateX(0); }
-                    20%, 60% { transform: translateX(-6px); }
-                    40%, 80% { transform: translateX(6px); }
-                }
-            `}
-            </style>
-            {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */}
+            <button
+                className="absolute inset-0 cursor-default"
+                aria-label="Close dialog"
+                tabIndex={-1}
+                type="button"
+                onClick={close}
+            />
             <form
-                onClick={e => e.stopPropagation()}
+                className={`pin-modal relative w-[460px] max-w-[90vw] px-8 py-7 text-zinc-100 ${state === 'error' ? 'pin-modal--shake' : ''}`}
                 onSubmit={submit}
-                style={{
-                    background: '#0e0e0e',
-                    border: '1px solid var(--cn-border2)',
-                    width: 460, maxWidth: '90vw',
-                    padding: '28px 32px',
-                    color: 'var(--cn-text)',
-                    fontFamily: 'var(--cn-font)',
-                    animation: state === 'error' ? 'pinShake .35s ease' : 'pinModalSlide .22s cubic-bezier(.2,.7,.3,1)',
-                    boxShadow: '0 24px 80px rgba(0,0,0,.6)',
-                }}
             >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20, fontSize: 11, letterSpacing: '0.18em', color: 'var(--cn-dim)' }}>
+                <div className="flex justify-between mb-5 text-[0.6875rem] tracking-[0.18em] text-zinc-400">
                     <span>AUTHORIZATION</span>
-                    <button type="button" onClick={close} style={{ background: 'none', border: 'none', color: 'var(--cn-dim)', cursor: 'pointer', font: 'inherit', fontSize: 11 }}>ESC</button>
+                    <button
+                        className="border-none text-[0.6875rem] [font-family:inherit] bg-none text-zinc-400 cursor-pointer"
+                        type="button"
+                        onClick={close}
+                    >
+                        ESC
+                    </button>
                 </div>
-                <div style={{ fontSize: 22, marginBottom: 4, fontWeight: 500, letterSpacing: '-0.01em' }}>
+                <div className="mb-1 font-medium text-[1.375rem] tracking-[-0.01em]">
                     {target.track.title || '(untitled)'}
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--cn-dim)', marginBottom: 24 }}>
-                    {target.track.id}
-                    {' '}
-                    ·
-                    {fmtDuration(target.track.duration)}
-                    {' '}
-                    ·
-                    {target.track.bpm.join('/')}
-                    {' '}
-                    bpm ·
-                    {target.track.key.join(', ')}
+                <div className="mb-6 text-xs text-zinc-400">
+                    {`${target.track.id} · ${fmtDuration(target.track.duration)} · ${target.track.bpm.join('/')} BPM · ${target.track.key.join(', ')}`}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
-                    <DLChip kind="master" active={target.kind === 'master'}>
+                <div className="grid grid-cols-2 gap-2 mb-5">
+                    <DLChip active={target.kind === 'master'} kind="master">
                         {slug}
                         .wav
                     </DLChip>
-                    <DLChip kind="mixdown" active={target.kind === 'mixdown'} disabled={!target.track.mixdown}>
+                    <DLChip active={target.kind === 'mixdown'} disabled={!target.track.mixdown} kind="mixdown">
                         {target.track.mixdown ? `${slug}_mixdown.wav` : 'no mixdown'}
                     </DLChip>
                 </div>
                 <label
+                    className="block mb-2 text-[0.6875rem] tracking-[0.18em] text-zinc-400"
                     htmlFor="pin-input"
-                    style={{ display: 'block', fontSize: 11, letterSpacing: '0.18em', color: 'var(--cn-dim)', marginBottom: 8 }}
                 >
                     AUTHORIZATION
                 </label>
                 <input
+                    className={`pin-modal__input w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150 ${state === 'error' ? 'pin-modal__input--error' : ''}`}
+                    autoComplete="off"
                     id="pin-input"
+                    maxLength={6}
+                    placeholder="• • • •"
                     ref={inputRef}
                     type="password"
                     value={pin}
                     onChange={e => setPin(e.target.value)}
-                    maxLength={6}
-                    placeholder="• • • •"
-                    autoComplete="off"
-                    style={{
-                        width: '100%', boxSizing: 'border-box',
-                        background: '#000', border: `1px solid ${state === 'error' ? 'var(--cn-danger)' : 'var(--cn-border2)'}`,
-                        color: 'var(--cn-text)', font: 'inherit', fontSize: 22,
-                        letterSpacing: '0.5em', padding: '14px 16px',
-                        outline: 'none', transition: 'border-color .15s, box-shadow .15s',
-                        boxShadow: state === 'error' ? '0 0 0 3px rgba(193,74,58,0.18)' : 'none',
-                    }}
-                    onFocus={(e) => { if (state !== 'error') e.target.style.borderColor = 'var(--cn-accent)'; }}
-                    onBlur={(e) => { if (state !== 'error') e.target.style.borderColor = 'var(--cn-border2-raw, #2a2a2a)'; }}
                 />
-                <div style={{ minHeight: 18, marginTop: 8, fontSize: 11, color: state === 'error' ? 'var(--cn-danger)' : state === 'success' ? 'var(--cn-sage)' : 'var(--cn-dim)' }}>
+                <div className="min-h-[18px] mt-2 text-[0.6875rem]" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
                     {state === 'error' && 'Invalid pin'}
                     {state === 'success' && '✓ Verified — generating signed url'}
                     {state === 'idle' && ' '}
                     {state === 'checking' && 'Verifying…'}
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                <div className="flex gap-2 mt-5">
                     <button
+                        className="flex-1 px-4 py-3 border border-zinc-700 text-xs tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 cursor-pointer"
                         type="button"
                         onClick={close}
-                        style={{
-                            flex: 1,
-                            background: 'transparent', border: '1px solid var(--cn-border2)',
-                            color: 'var(--cn-dim)', font: 'inherit', fontSize: 12,
-                            letterSpacing: '0.18em', padding: '12px 16px', cursor: 'pointer',
-                        }}
                     >
                         CANCEL
                     </button>
                     <button
-                        type="submit"
+                        className="flex-[2] px-4 py-3 border-none font-medium text-xs tracking-[0.18em] [font-family:inherit] text-white transition-[background,opacity] duration-150"
                         disabled={state === 'checking' || state === 'success'}
                         style={{
-                            flex: 2,
-                            background: state === 'success' ? '#3a4a35' : 'var(--cn-accent)',
-                            border: 'none',
-                            color: '#fff', font: 'inherit', fontSize: 12, fontWeight: 500,
-                            letterSpacing: '0.18em', padding: '12px 16px',
+                            background: state === 'success' ? 'var(--color-sage-40)' : 'var(--color-orange-80)',
                             cursor: state === 'checking' ? 'wait' : 'pointer',
-                            transition: 'background .15s, opacity .15s',
                             opacity: state === 'checking' ? 0.6 : 1,
                         }}
+                        type="submit"
                     >
                         {state === 'success' ? '✓ DOWNLOAD READY' : state === 'checking' ? 'VERIFYING…' : 'DOWNLOAD'}
                     </button>
@@ -230,25 +180,22 @@ function PinModalChrome({
     );
 }
 
-function DLChip({ kind, active, disabled, children }: {
-    kind: string;
-    active: boolean;
-    disabled?: boolean;
-    children: React.ReactNode;
+function DLChip({ active, children, disabled, kind }: {
+    active: boolean; children: React.ReactNode; disabled?: boolean; kind: string;
 }) {
     return (
-        <div style={{
-            background: active ? 'rgba(255,255,255,.04)' : 'transparent',
-            border: `1px solid ${active ? 'var(--cn-accent)' : 'var(--cn-border2)'}`,
-            padding: '10px 12px',
-            opacity: disabled ? 0.4 : 1,
-            fontSize: 11,
-        }}
+        <div
+            className="px-3 py-2.5 rounded-none text-[0.6875rem]"
+            style={{
+                background: active ? 'var(--color-white-20)' : 'var(--color-transparent)',
+                border: `1px solid ${active ? 'var(--color-orange-80)' : 'var(--color-white-20)'}`,
+                opacity: disabled ? 0.4 : 1,
+            }}
         >
-            <div style={{ color: 'var(--cn-dim)', letterSpacing: '0.18em', marginBottom: 4 }}>
+            <div className="mb-1 tracking-[0.18em] text-zinc-400">
                 {kind === 'master' ? 'MASTER' : 'MIXDOWN'}
             </div>
-            <div style={{ color: 'var(--cn-text)', wordBreak: 'break-all', lineHeight: 1.3 }}>
+            <div className="text-zinc-100 break-all leading-[1.3]">
                 {children}
             </div>
         </div>

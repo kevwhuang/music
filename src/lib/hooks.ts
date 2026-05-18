@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import { BPM_MAX, BPM_MIN, bpmNum } from './utils';
-import { usePlayer } from './store';
+import { BPM_MAX, BPM_MIN, bpmNum } from '@lib/utils';
+import { usePlayer } from '@lib/store';
 
 const PAGE_SIZE = 50;
 

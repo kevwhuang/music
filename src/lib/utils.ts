@@ -25,10 +25,6 @@ export function categoryLabel(c: string): string {
     return { music: 'Music', sessions: 'Sessions', productions: 'Productions' }[c] ?? c;
 }
 
-export function categoryShort(c: string): string {
-    return { music: 'MUS', sessions: 'SES', productions: 'PRD' }[c] ?? c;
-}
-
 export function fmtCounter(s: number): string {
     const m = Math.floor(s / 60);
     const ss = Math.floor(s % 60);
@@ -40,6 +36,10 @@ export function fmtDuration(s: number | undefined | null): string {
     const m = Math.floor(s / 60);
     const ss = String(Math.floor(s % 60)).padStart(2, '0');
     return `${m}:${ss}`;
+}
+
+export function fmtKey(key: string): string {
+    return key.toUpperCase().replace(/([A-G])B/g, '$1b');
 }
 
 export function nextSort(current: { field: string; dir: string }, field: string) {

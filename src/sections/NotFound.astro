@@ -3,16 +3,16 @@
 ---
 
 <section
-    class="not-found flex items-center justify-center min-h-screen px-[clamp(1rem,calc(0.5rem+2.5vw),2.5rem)] bg-zinc-950"
+    class="flex flex-1 items-center justify-center px-[clamp(1rem,calc(0.5rem+2.5vw),2.5rem)] bg-zinc-950"
 >
-    <div class="not-found__content text-center select-none">
+    <div class="text-center select-none">
         <h1
-            class="not-found__title mb-[clamp(1rem,calc(0.33rem+3.33vw),3rem)] font-bold text-[clamp(6rem,calc(3.0rem+15.0vw),15rem)] tracking-widest"
+            class="mb-[clamp(1rem,calc(0.33rem+3.33vw),3rem)] font-bold text-[clamp(6rem,calc(3.0rem+15.0vw),15rem)] tracking-widest bg-linear-to-b from-white-60 to-white-40 bg-clip-text text-transparent"
         >
             404
         </h1>
         <a
-            class="not-found__link inline-block min-h-[clamp(2.75rem,calc(2.5rem+1.25vw),3.5rem)] px-[clamp(1.5rem,calc(1.17rem+1.67vw),2.5rem)] py-[clamp(0.875rem,calc(0.75rem+0.62vw),1.25rem)] border border-white-20 font-mono text-sm lowercase tracking-[0.2em] text-white-60 transition-all duration-300"
+            class="inline-block min-h-[clamp(2.75rem,calc(2.5rem+1.25vw),3.5rem)] px-[clamp(1.5rem,calc(1.17rem+1.67vw),2.5rem)] py-[clamp(0.875rem,calc(0.75rem+0.62vw),1.25rem)] border border-white-20 font-mono text-sm lowercase tracking-[0.2em] text-white-60 transition-all duration-300 hover:bg-white-20 hover:border-orange hover:text-orange hover:[text-shadow:0_0_20px_var(--color-orange)] active:opacity-70"
             aria-label="Return to home"
             href="/"
         >
@@ -20,23 +20,3 @@
         </a>
     </div>
 </section>
-
-<style>
-    .not-found__title {
-        background: linear-gradient(
-            180deg,
-            var(--color-white-60) 0%,
-            var(--color-white-40) 100%
-        );
-        background-clip: text;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: var(--color-transparent);
-    }
-
-    .not-found__link:hover {
-        background-color: var(--color-white-20);
-        border-color: var(--color-orange-40);
-        color: var(--color-orange-80);
-        text-shadow: 0 0 20px var(--color-orange-20);
-    }
-</style>

@@ -1,3 +1,139 @@
+.catalog__category-btn--active {
+    background: var(--color-orange-80);
+    color: var(--color-white);
+    font-weight: 600;
+}
+
+.catalog__dl-btn:hover:not(:disabled) {
+    background: var(--color-white-20);
+    border-color: var(--color-orange-80);
+    color: var(--color-orange-80);
+}
+
+.catalog__dl-btn:active:not(:disabled) {
+    opacity: 0.7;
+}
+
+.catalog__dl-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.catalog__dropdown {
+    box-shadow: 0 10px 30px var(--color-black-60);
+}
+
+.catalog__page-btn:hover:not(:disabled) {
+    background: var(--color-white-20);
+    border-color: var(--color-orange-80);
+    color: var(--color-orange-80);
+}
+
+.catalog__page-btn:active:not(:disabled) {
+    opacity: 0.7;
+}
+
+.catalog__page-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.catalog__page-btn--active {
+    background: var(--color-orange-80);
+    border-color: var(--color-orange-80);
+    color: var(--color-white);
+}
+
+.catalog__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (min-width: 768px) {
+    .catalog__row {
+        grid-template-columns: 36px 70px minmax(0, 1fr) 70px 80px 220px;
+    }
+}
+
+.catalog__row:hover {
+    background: var(--color-white-20);
+}
+
+.catalog__row:active:not(:has(.catalog__dl-btn:active)) {
+    background: var(--color-white-40);
+}
+
+.catalog__row--disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.catalog__row--disabled:hover,
+.catalog__row--disabled:active {
+    background: var(--color-transparent);
+}
+
+.catalog__row--playing {
+    background: var(--color-orange-20);
+}
+
+.catalog__row--playing:hover {
+    background: var(--color-orange-40);
+}
+
+.catalog__sort-btn:hover {
+    color: var(--color-white);
+}
+
+.catalog__sort-btn:active {
+    opacity: 0.7;
+}
+
+.footer__link:hover {
+    color: var(--color-white);
+}
+
+.footer__link:active {
+    opacity: 0.7;
+}
+
+.pin-modal {
+    animation: pin-modal__slide 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+    background: var(--color-zinc-950);
+    border: 1px solid var(--color-white-20);
+    box-shadow: 0 24px 80px var(--color-black-60);
+    font-family: var(--font-mono);
+}
+
+.pin-modal--shake {
+    animation: pin-modal__shake 0.35s ease;
+}
+
+.pin-modal__input {
+    background: var(--color-black);
+    border: 1px solid var(--color-white-20);
+    color: var(--color-white);
+}
+
+.pin-modal__input:hover {
+    border-color: var(--color-white-40);
+}
+
+.pin-modal__input:focus {
+    border-color: var(--color-orange-80);
+    outline: none;
+}
+
+.pin-modal__input--error {
+    border-color: var(--color-red);
+    box-shadow: 0 0 0 3px var(--color-red-20);
+}
+
+.pin-modal__overlay {
+    animation: pin-modal__fade-in 0.18s ease;
+    backdrop-filter: blur(8px);
+    background: var(--color-black-60);
+}
+
 .player {
     background-color: var(--color-zinc-950);
     background-image: linear-gradient(180deg, var(--color-cream-20), var(--color-cream-20));
@@ -13,7 +149,7 @@
     max-height: 200px;
     opacity: 1;
     overflow: hidden;
-    transition: max-height 200ms ease, opacity 150ms ease;
+    transition: max-height 300ms ease, opacity 300ms ease;
 }
 
 .player--collapsed .player__expandable {
@@ -22,18 +158,16 @@
 }
 
 .player__collapse-btn {
-    background: var(--color-white-20);
     border: none;
-    color: var(--color-cream-60);
+    transition: opacity 150ms;
 }
 
 .player__collapse-btn:hover {
-    background: var(--color-white-40);
-    color: var(--color-cream);
+    opacity: 0.8;
 }
 
 .player__collapse-btn:active {
-    background: var(--color-white-20);
+    opacity: 0.6;
 }
 
 .player__counter {
@@ -156,132 +290,6 @@
 
 .player__waveform-center--idle {
     animation: player__center-pulse 2s ease-in-out infinite;
-}
-
-.catalog__category-btn--active {
-    background: var(--color-orange-80);
-    color: var(--color-white);
-    font-weight: 600;
-}
-
-.catalog__dl-btn:hover:not(:disabled) {
-    background: var(--color-white-20);
-    border-color: var(--color-orange-80);
-    color: var(--color-orange-80);
-}
-
-.catalog__dl-btn:active:not(:disabled) {
-    opacity: 0.7;
-}
-
-.catalog__dl-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.4;
-}
-
-.catalog__dropdown {
-    box-shadow: 0 10px 30px var(--color-black-60);
-}
-
-.catalog__page-btn:hover:not(:disabled) {
-    background: var(--color-white-20);
-    border-color: var(--color-orange-80);
-    color: var(--color-orange-80);
-}
-
-.catalog__page-btn:active:not(:disabled) {
-    opacity: 0.7;
-}
-
-.catalog__page-btn:disabled {
-    cursor: not-allowed;
-    opacity: 0.4;
-}
-
-.catalog__page-btn--active {
-    background: var(--color-orange-80);
-    border-color: var(--color-orange-80);
-    color: var(--color-white);
-}
-
-.catalog__row:hover {
-    background: var(--color-white-20);
-}
-
-.catalog__row:active {
-    background: var(--color-white-40);
-}
-
-.catalog__row--disabled {
-    cursor: not-allowed;
-    opacity: 0.45;
-}
-
-.catalog__row--disabled:hover,
-.catalog__row--disabled:active {
-    background: var(--color-transparent);
-}
-
-.catalog__row--playing {
-    background: linear-gradient(90deg, var(--color-orange-20), var(--color-orange-20));
-}
-
-.catalog__sort-btn:hover {
-    color: var(--color-white);
-}
-
-.catalog__sort-btn:active {
-    opacity: 0.7;
-}
-
-.not-found__link:active {
-    opacity: 0.7;
-}
-
-.footer__link:hover {
-    color: var(--color-white);
-}
-
-.footer__link:active {
-    opacity: 0.7;
-}
-
-.pin-modal {
-    animation: pin-modal__slide 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
-    background: var(--color-zinc-950);
-    border: 1px solid var(--color-white-20);
-    box-shadow: 0 24px 80px var(--color-black-60);
-    font-family: var(--font-mono);
-}
-
-.pin-modal--shake {
-    animation: pin-modal__shake 0.35s ease;
-}
-
-.pin-modal__input {
-    background: var(--color-black);
-    border: 1px solid var(--color-white-20);
-    color: var(--color-white);
-}
-
-.pin-modal__input:hover {
-    border-color: var(--color-white-40);
-}
-
-.pin-modal__input:focus {
-    border-color: var(--color-orange-80);
-    outline: none;
-}
-
-.pin-modal__input--error {
-    border-color: var(--color-red);
-    box-shadow: 0 0 0 3px var(--color-red-20);
-}
-
-.pin-modal__overlay {
-    animation: pin-modal__fade-in 0.18s ease;
-    backdrop-filter: blur(8px);
-    background: var(--color-black-60);
 }
 
 @keyframes pin-modal__fade-in {

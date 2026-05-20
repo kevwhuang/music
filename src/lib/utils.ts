@@ -16,13 +16,15 @@ export function buildSlug(id: string, title: string): string {
 
 export function categoryFromId(id: string): Category {
     const prefix = id.charAt(0).toUpperCase();
+
     if (prefix === 'A') return 'music';
     if (prefix === 'B') return 'sessions';
+
     return 'productions';
 }
 
 export function categoryLabel(c: string): string {
-    return { music: 'Music', sessions: 'Sessions', productions: 'Productions' }[c] ?? c;
+    return { music: 'Music', productions: 'Productions', sessions: 'Sessions' }[c] ?? c;
 }
 
 export function fmtCounter(s: number): string {
@@ -33,6 +35,7 @@ export function fmtCounter(s: number): string {
 
 export function fmtDuration(s: number | undefined | null): string {
     if (!s && s !== 0) return '—';
+
     const m = Math.floor(s / 60);
     const ss = String(Math.floor(s % 60)).padStart(2, '0');
     return `${m}:${ss}`;
@@ -42,8 +45,9 @@ export function fmtKey(key: string): string {
     return key.toUpperCase().replace(/([A-G])B/g, '$1b');
 }
 
-export function nextSort(current: { field: string; dir: string }, field: string) {
-    if (current.field !== field) return { field, dir: 'asc' as const };
-    if (current.dir === 'asc') return { field, dir: 'desc' as const };
-    return { field: 'id', dir: 'asc' as const };
+export function nextSort(current: { dir: string; field: string }, field: string) {
+    if (current.field !== field) return { dir: 'asc' as const, field };
+    if (current.dir === 'asc') return { dir: 'desc' as const, field };
+
+    return { dir: 'asc' as const, field: 'id' };
 }

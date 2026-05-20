@@ -7,7 +7,6 @@ import { ClientRouter } from 'astro:transitions';
 import '@/global.css';
 import '@/styles.css';
 import Footer from '@sections/Footer.astro';
-import Player from '@sections/Player';
 
 interface Props {
     description: string;
@@ -56,8 +55,7 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
         <ClientRouter />
     </head>
     <body class="flex flex-col min-h-screen font-sans bg-zinc-950 text-white">
-        <Player client:only="react" />
-        <main class="flex-1">
+        <main class="flex flex-1 flex-col">
             <slot />
         </main>
         <Footer />

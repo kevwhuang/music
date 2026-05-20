@@ -4,8 +4,7 @@ name: audit-html
 user-invocable: true
 ---
 
-Audit `.astro` and `.html` files.
-Skip paths in `.gitignore`.
+Audit `.astro` and `.html` files. Skip paths in `.gitignore`.
 
 ## Attributes
 
@@ -33,6 +32,7 @@ Sort attributes on every element in this order:
 
 - `alt` on all images
 - All interactive elements focusable and operable via keyboard
+- Focus trapped in modals and restored to trigger on close
 - Color contrast meets WCAG AA: 4.5:1 for text, 3:1 for UI
 - No skipped heading levels
 - `aria-label` or `aria-labelledby` on elements without visible text

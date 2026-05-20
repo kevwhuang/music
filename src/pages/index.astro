@@ -1,15 +1,22 @@
 ---
+import { getCollection } from 'astro:content';
+
 import Catalog from '@sections/Catalog';
 import Hero from '@sections/Hero.astro';
 import Layout from '@/Layout.astro';
 import Player from '@sections/Player';
+
+const entries = await getCollection('tracks');
+const tracks = entries
+    .map(entry => ({ ...entry.data, id: entry.id }))
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 ---
 
 <Layout
     description="Browse original music, sessions, and productions from Aephonics."
     title="Music"
 >
-    <Player client:only="react" />
-    <Hero />
-    <Catalog client:only="react" />
+    <Player client:only="react" tracks={tracks} />
+    <Hero tracks={tracks} />
+    <Catalog client:only="react" tracks={tracks} />
 </Layout>

@@ -45,13 +45,7 @@
 }
 
 .catalog__row {
-    grid-template-columns: minmax(0, 1fr) auto;
-}
-
-@media (min-width: 768px) {
-    .catalog__row {
-        grid-template-columns: 36px 70px minmax(0, 1fr) 70px 80px 220px;
-    }
+    grid-template-columns: 36px 70px minmax(0, 1fr) 70px 80px 220px;
 }
 
 .catalog__row:hover {
@@ -97,7 +91,7 @@
 }
 
 .pin-modal {
-    animation: pin-modal__slide 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
+    animation: pin-modal__slide 0.2s cubic-bezier(0.2, 0.7, 0.3, 1);
     background: var(--color-zinc-950);
     border: 1px solid var(--color-white-20);
     box-shadow: 0 24px 80px var(--color-black-60);
@@ -105,7 +99,7 @@
 }
 
 .pin-modal--shake {
-    animation: pin-modal__shake 0.35s ease;
+    animation: pin-modal__shake 0.4s ease;
 }
 
 .pin-modal__input {
@@ -129,7 +123,7 @@
 }
 
 .pin-modal__overlay {
-    animation: pin-modal__fade-in 0.18s ease;
+    animation: pin-modal__fade-in 0.2s ease;
     backdrop-filter: blur(8px);
     background: var(--color-black-60);
 }
@@ -138,7 +132,7 @@
     background-color: var(--color-zinc-950);
     background-image: linear-gradient(180deg, var(--color-cream-20), var(--color-cream-20));
     box-shadow: 0 4px 20px var(--color-black-40);
-    transition: box-shadow 150ms;
+    transition: box-shadow 0.15s;
 }
 
 .player--collapsed {
@@ -149,7 +143,7 @@
     max-height: 200px;
     opacity: 1;
     overflow: hidden;
-    transition: max-height 300ms ease, opacity 300ms ease;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
 .player--collapsed .player__expandable {
@@ -159,7 +153,6 @@
 
 .player__collapse-btn {
     border: none;
-    transition: opacity 150ms;
 }
 
 .player__collapse-btn:hover {

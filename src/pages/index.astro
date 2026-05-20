@@ -2,12 +2,14 @@
 import Catalog from '@sections/Catalog';
 import Hero from '@sections/Hero.astro';
 import Layout from '@/Layout.astro';
+import Player from '@sections/Player';
 ---
 
 <Layout
-    description="Music production portfolio and compositions."
+    description="Browse original music, sessions, and productions from Aephonics."
     title="Music"
 >
+    <Player client:only="react" />
     <Hero />
     <Catalog client:only="react" />
 </Layout>

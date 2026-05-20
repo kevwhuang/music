@@ -4,8 +4,7 @@ name: audit-js
 user-invocable: true
 ---
 
-Audit `.js`, `.ts`, `.tsx` files and frontmatter and `<script>` blocks in `.astro` files.
-Skip paths in `.gitignore`.
+Audit `.js`, `.ts`, `.tsx` files and frontmatter and `<script>` blocks in `.astro` files. Skip paths in `.gitignore`.
 
 ## Ordering
 
@@ -19,7 +18,8 @@ Reorder top-level declarations in this sequence:
 4. **Variables**: derived or computed state
 5. **Helpers**: internal utility functions
 6. **Main logic**: primary functions and classes
-7. **Exports**: inline named exports at declaration, no `export default` or `export { }` blocks
+7. **Exports**: inline named exports at declaration. No `export default` or `export { }` blocks unless required by framework.
+8. **Colocation**: single-use types and functions stay local. Multi-use types go in `env.d.ts`, multi-use functions in `lib/`.
 
 ## Tests
 

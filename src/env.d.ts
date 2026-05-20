@@ -2,12 +2,10 @@
 
 declare module 'eslint-plugin-jsx-a11y';
 
-type Category = 'music' | 'productions' | 'sessions';
-
 interface Track {
     audioUrl: string;
     bpm: string[];
-    category: Category;
+    category: 'music' | 'productions' | 'sessions';
     duration: number;
     heart: boolean;
     id: string;

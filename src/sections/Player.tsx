@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { PLAYER, useCurrentTrack, usePlayer } from '@lib/store';
-import { TRACKS } from '@lib/tracks';
-import { categoryLabel, fmtCounter, fmtDuration, fmtKey } from '@lib/utils';
-import { useVU } from '@lib/hooks';
+import { PLAYER, usePlayer } from '@lib/store';
+import { categoryLabel, fmtDuration } from '@lib/utils';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import { PauseIcon } from '@components/PauseIcon';
 import { PlayIcon } from '@components/PlayIcon';
@@ -16,7 +14,14 @@ const WAVE_H = 84;
 const WAVEFORM_BARS = 180;
 const WAVEFORM_HEIGHT = WAVE_H + TICK_H;
 
+let TRACKS: Track[] = [];
 const WAVEFORM_CACHE: Record<string, number[]> = {};
+
+function fmtCounter(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const remaining = Math.floor(seconds % 60);
+    return `${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`;
+}
 
 function Fader({ className, label, resetValue, value, onChange }: {
     className?: string; label: string; resetValue?: number; value: number; onChange: (v: number) => void;
@@ -78,11 +83,11 @@ function Fader({ className, label, resetValue, value, onChange }: {
 }
 
 function ProgressBar() {
-    const s = usePlayer();
-    const t = useCurrentTrack();
+    const player = usePlayer();
+    const track = useCurrentTrack();
     const ref = useRef<HTMLDivElement>(null);
-    const dur = s.duration || t?.duration || 0;
-    const frac = dur ? s.position / dur : 0;
+    const dur = player.duration || track?.duration || 0;
+    const frac = dur ? player.position / dur : 0;
 
     return (
         <div
@@ -91,18 +96,18 @@ function ProgressBar() {
             aria-label="Track progress"
             aria-valuemax={dur || 0}
             aria-valuemin={0}
-            aria-valuenow={Math.floor(s.position)}
+            aria-valuenow={Math.floor(player.position)}
             role="slider"
             tabIndex={0}
             onClick={(e) => {
-                if (!t || !ref.current) return;
+                if (!track || !ref.current) return;
                 const rect = ref.current.getBoundingClientRect();
                 PLAYER.seek(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * dur);
             }}
             onKeyDown={(e) => {
-                if (!t) return;
-                if (e.key === 'ArrowLeft') PLAYER.seek(Math.max(0, s.position - 5));
-                else if (e.key === 'ArrowRight') PLAYER.seek(Math.min(dur, s.position + 5));
+                if (!track) return;
+                if (e.key === 'ArrowLeft') PLAYER.seek(Math.max(0, player.position - 5));
+                else if (e.key === 'ArrowRight') PLAYER.seek(Math.min(dur, player.position + 5));
             }}
         >
             <div className="player__progress-fill" style={{ width: `${frac * 100}%` }} />
@@ -176,33 +181,33 @@ function VUMeter({ label, level }: { label: string; level: number }) {
 }
 
 function Waveform() {
-    const s = usePlayer();
-    const t = useCurrentTrack();
+    const player = usePlayer();
+    const track = useCurrentTrack();
     const ref = useRef<HTMLDivElement>(null);
     const [hoverPos, setHoverPos] = useState<number | null>(null);
     const [hoverPx, setHoverPx] = useState<number | null>(null);
-    const peaks = t ? waveformFor(t.id, t.duration) : null;
-    const dur = s.duration || t?.duration || 0;
-    const playedFrac = dur ? s.position / dur : 0;
+    const peaks = track ? waveformFor(track.id, track.duration) : null;
+    const dur = player.duration || track?.duration || 0;
+    const playedFrac = dur ? player.position / dur : 0;
 
     return (
         <div
-            className={`player__waveform relative py-2 overflow-hidden ${t ? 'cursor-pointer' : ''}`}
+            className={`player__waveform relative py-2 overflow-hidden ${track ? 'cursor-pointer' : ''}`}
             ref={ref}
             aria-label="Waveform scrubber"
             aria-valuemax={dur || 0}
             aria-valuemin={0}
-            aria-valuenow={Math.floor(s.position)}
+            aria-valuenow={Math.floor(player.position)}
             role="slider"
             style={{ height: WAVEFORM_HEIGHT }}
             tabIndex={0}
             onKeyDown={(e) => {
-                if (!t) return;
-                if (e.key === 'ArrowLeft') PLAYER.seek(Math.max(0, s.position - 5));
-                else if (e.key === 'ArrowRight') PLAYER.seek(Math.min(dur, s.position + 5));
+                if (!track) return;
+                if (e.key === 'ArrowLeft') PLAYER.seek(Math.max(0, player.position - 5));
+                else if (e.key === 'ArrowRight') PLAYER.seek(Math.min(dur, player.position + 5));
             }}
             onMouseDown={(e) => {
-                if (!t || !ref.current) return;
+                if (!track || !ref.current) return;
                 e.preventDefault();
                 const seek = (ev: MouseEvent) => {
                     if (!ref.current) return;
@@ -222,7 +227,7 @@ function Waveform() {
                 setHoverPx(null);
             }}
             onMouseMove={(e) => {
-                if (!t || !ref.current) return;
+                if (!track || !ref.current) return;
                 const rect = ref.current.getBoundingClientRect();
                 const x = e.clientX - rect.left;
                 setHoverPx(x);
@@ -230,14 +235,14 @@ function Waveform() {
             }}
         >
             <div className="absolute left-0 right-0 top-0" style={{ height: WAVE_H }}>
-                <div className={`player__waveform-center absolute left-0 right-0 top-1/2 h-px ${!t ? 'player__waveform-center--idle' : ''}`} />
+                <div className={`player__waveform-center absolute left-0 right-0 top-1/2 h-px ${!track ? 'player__waveform-center--idle' : ''}`} />
                 {peaks && (
                     <svg className="absolute inset-0" height="100%" preserveAspectRatio="none" viewBox={`0 0 ${peaks.length * 2} 100`} width="100%">
                         {peaks.map((p, i) => {
                             const x = i * 2 + 0.5;
                             const isPlayed = (i / peaks.length) <= playedFrac;
                             const distFromHead = Math.abs(i / peaks.length - playedFrac);
-                            const pulse = s.playing && isPlayed && distFromHead < 0.08
+                            const pulse = player.playing && isPlayed && distFromHead < 0.08
                                 ? 1 + (1 - distFromHead / 0.08) * 0.18
                                 : 1;
                             const h = p * 88 * pulse;
@@ -253,7 +258,7 @@ function Waveform() {
                 )}
             </div>
             <div className="absolute left-0 right-0 border-t border-[var(--color-cream-20)]" style={{ background: 'var(--color-zinc-950)', height: TICK_H, top: WAVE_H }}>
-                {t && dur > 0 && (() => {
+                {track && dur > 0 && (() => {
                     const ticks: React.ReactNode[] = [];
                     const step = dur > 240 ? 60 : dur > 60 ? 30 : 15;
                     for (let i = step; i < dur; i += step) {
@@ -270,13 +275,13 @@ function Waveform() {
                     return ticks;
                 })()}
             </div>
-            {t && (
+            {track && (
                 <div className="player__playhead absolute z-[2] w-0.5" style={{ height: WAVE_H + 4, left: `${playedFrac * 100}%`, top: -2, transform: 'translateX(-1px)' }}>
                     <div className="absolute top-[-3px] left-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-[var(--color-cream)] -translate-x-1/2" />
                     <div className="absolute bottom-[-3px] left-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[5px] border-b-[var(--color-cream)] -translate-x-1/2" />
                 </div>
             )}
-            {hoverPos !== null && t && (
+            {hoverPos !== null && track && (
                 <div className="player__hover-time absolute px-[7px] py-0.5 text-[0.6875rem]" style={{ left: hoverPx!, top: 6, transform: 'translateX(-50%)' }}>
                     {fmtDuration(hoverPos)}
                 </div>
@@ -324,9 +329,49 @@ function waveformFor(id: string, duration: number): number[] {
     return peaks;
 }
 
-function PlayerInner() {
-    const s = usePlayer();
-    const t = useCurrentTrack();
+function useCurrentTrack(): Track | null {
+    const player = usePlayer();
+
+    if (!player.trackId) return null;
+
+    return TRACKS.find(t => t.id === player.trackId) ?? null;
+}
+
+function useVU() {
+    const player = usePlayer();
+    const [levels, setLevels] = useState([0.1, 0.1]);
+
+    useEffect(() => {
+        if (!player.playing) {
+            const decay = setInterval(() => {
+                setLevels(levels => levels.map(level => Math.max(0.04, level * 0.85)));
+            }, 80);
+
+            return () => clearInterval(decay);
+        }
+
+        let phase = 0;
+
+        const interval = setInterval(() => {
+            phase += 0.06;
+            const base = 0.55 + Math.sin(phase * 1.7) * 0.18;
+            const baseR = 0.5 + Math.sin(phase * 2.1 + 0.7) * 0.22;
+            setLevels([
+                Math.max(0.05, Math.min(1, base + (Math.random() - 0.5) * 0.18)),
+                Math.max(0.05, Math.min(1, baseR + (Math.random() - 0.5) * 0.22)),
+            ]);
+        }, 60);
+
+        return () => clearInterval(interval);
+    }, [player.playing]);
+
+    return levels;
+}
+
+function PlayerInner({ tracks }: { tracks: Track[] }) {
+    TRACKS = tracks;
+    const player = usePlayer();
+    const track = useCurrentTrack();
     const [vuL, vuR] = useVU();
 
     useEffect(() => {
@@ -339,16 +384,16 @@ function PlayerInner() {
                 PLAYER.toggle();
             } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
-                const ps = PLAYER.get();
+                const state = PLAYER.get();
                 const step = e.shiftKey ? 10 : 5;
-                PLAYER.seek(Math.max(0, ps.position - step));
+                PLAYER.seek(Math.max(0, state.position - step));
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
-                const ps = PLAYER.get();
-                const tr = TRACKS.find(x => x.id === ps.trackId);
-                if (!tr) return;
+                const state = PLAYER.get();
+                const current = TRACKS.find(x => x.id === state.trackId);
+                if (!current) return;
                 const step = e.shiftKey ? 10 : 5;
-                PLAYER.seek(Math.min(tr.duration, ps.position + step));
+                PLAYER.seek(Math.min(current.duration, state.position + step));
             } else if (e.key === 'r' || e.key === 'R') {
                 PLAYER.setRepeat(!PLAYER.get().repeat);
             }
@@ -360,64 +405,61 @@ function PlayerInner() {
 
     return (
         <div
-            className={`player relative sticky top-0 z-[100] font-mono text-sm ${s.collapsed ? 'player--collapsed' : ''}`}
+            className={`player relative sticky top-0 z-[100] font-mono text-sm ${player.collapsed ? 'player--collapsed' : ''}`}
             aria-label="Audio player"
             role="region"
         >
-            <div className="flex items-center gap-[clamp(0.75rem,calc(0.5rem+1.25vw),1.5rem)] px-[clamp(1rem,calc(0.5rem+2.5vw),2.5rem)] py-3.5">
+            <div className="flex items-center gap-6 px-10 py-3.5">
                 <button
-                    className="player__collapse-btn hidden lg:flex items-center justify-center rounded-full cursor-pointer"
-                    aria-expanded={!s.collapsed}
-                    aria-label={s.collapsed ? 'Expand player' : 'Collapse player'}
-                    onClick={() => PLAYER.set({ collapsed: !s.collapsed })}
+                    className="player__collapse-btn flex items-center justify-center rounded-full transition-opacity duration-150 cursor-pointer"
+                    aria-expanded={!player.collapsed}
+                    aria-label={player.collapsed ? 'Expand player' : 'Collapse player'}
+                    onClick={() => PLAYER.set({ collapsed: !player.collapsed })}
                 >
-                    <TapeReel spinning={s.playing} />
+                    <TapeReel spinning={player.playing} />
                 </button>
                 <div className="flex gap-2.5">
                     <TransportBtn
-                        active={s.playing}
-                        disabled={!t}
+                        active={player.playing}
+                        disabled={!track}
                         onClick={() => PLAYER.toggle()}
-                        title={s.playing ? 'Pause' : 'Play'}
+                        title={player.playing ? 'Pause' : 'Play'}
                     >
-                        {s.playing ? <PauseIcon /> : <PlayIcon />}
+                        {player.playing ? <PauseIcon /> : <PlayIcon />}
                     </TransportBtn>
                     <TransportBtn
-                        active={s.repeat}
-                        onClick={() => PLAYER.setRepeat(!s.repeat)}
+                        active={player.repeat}
+                        onClick={() => PLAYER.setRepeat(!player.repeat)}
                         title="Repeat"
                     >
                         <RepeatIcon />
                     </TransportBtn>
                 </div>
                 <div className="flex-1 min-w-0">
-                    <div className={`player__track-title font-medium text-[clamp(1rem,calc(0.83rem+0.83vw),1.5rem)] tracking-[-0.01em] truncate leading-[1.2] font-inter ${t ? 'text-[var(--color-cream)]' : 'text-[var(--color-cream-40)]'}`}>
-                        {t ? (t.title || '(untitled session)') : 'Select a track'}
+                    <div className={`player__track-title font-medium text-2xl tracking-[-0.01em] truncate leading-[1.2] font-inter ${track ? 'text-[var(--color-cream)]' : 'text-[var(--color-cream-40)]'}`}>
+                        {track ? (track.title || '(untitled session)') : 'Select a track'}
                     </div>
                     <div className="mt-0.5 text-[0.6875rem] tracking-[0.2em] text-[var(--color-cream-60)]">
-                        {t ? `${categoryLabel(t.category).toUpperCase()} · ${t.id} · ${t.year} · ${t.bpm.join(' ')} BPM · ${t.key.map(fmtKey).join(', ')}` : 'NO TAPE LOADED'}
+                        {track ? `${categoryLabel(track.category).toUpperCase()} · ${track.id} · ${track.year} · ${track.bpm.join(' ')} BPM · ${track.key.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}` : 'NO TAPE LOADED'}
                     </div>
                 </div>
-                <div className="player__expandable hidden sm:block">
-                    <div className="player__counter min-w-[clamp(7rem,calc(5.67rem+6.67vw),11rem)] px-4 py-2 text-[clamp(1rem,calc(0.83rem+0.83vw),1.5rem)] text-center text-[var(--color-orange-80)]">
-                        {fmtCounter(s.position)}
+                <div className="player__expandable">
+                    <div className="player__counter min-w-44 px-4 py-2 text-2xl text-center text-[var(--color-orange-80)]">
+                        {fmtCounter(player.position)}
                         {' '}
                         <span className="text-[var(--color-cream-40)]">/</span>
                         {' '}
-                        <span className="text-[var(--color-cream-60)]">{fmtCounter(s.duration || t?.duration || 0)}</span>
+                        <span className="text-[var(--color-cream-60)]">{fmtCounter(player.duration || track?.duration || 0)}</span>
                     </div>
                 </div>
-                <div className="player__expandable hidden items-center gap-3 lg:flex">
+                <div className="player__expandable flex items-center gap-3">
                     <div className="flex items-center gap-0.5">
-                        <VUMeter label="L" level={s.playing ? vuL * s.volume : 0} />
-                        <VUMeter label="R" level={s.playing ? vuR * s.volume : 0} />
+                        <VUMeter label="L" level={player.playing ? vuL * player.volume : 0} />
+                        <VUMeter label="R" level={player.playing ? vuR * player.volume : 0} />
                     </div>
-                    <Fader label="VOL" value={s.volume} onChange={v => PLAYER.setVolume(v)} />
-                    <Fader label="LO" resetValue={1} value={s.lowpass} onChange={v => PLAYER.set({ lowpass: v })} />
-                    <Fader label="HI" resetValue={0} value={s.highpass} onChange={v => PLAYER.set({ highpass: v })} />
-                </div>
-                <div className="player__expandable flex lg:hidden">
-                    <Fader label="VOL" value={s.volume} onChange={v => PLAYER.setVolume(v)} />
+                    <Fader label="VOL" value={player.volume} onChange={volume => PLAYER.setVolume(volume)} />
+                    <Fader label="LO" resetValue={1} value={player.lowpass} onChange={lowpass => PLAYER.set({ lowpass })} />
+                    <Fader label="HI" resetValue={0} value={player.highpass} onChange={highpass => PLAYER.set({ highpass })} />
                 </div>
             </div>
             <div className="player__expandable">
@@ -428,10 +470,10 @@ function PlayerInner() {
     );
 }
 
-export default function Player() {
+export default function Player({ tracks }: { tracks: Track[] }) {
     return (
         <ErrorBoundary>
-            <PlayerInner />
+            <PlayerInner tracks={tracks} />
         </ErrorBoundary>
     );
 }

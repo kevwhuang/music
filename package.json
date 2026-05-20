@@ -1,6 +1,6 @@
 {
     "name": "music",
-    "version": "26.5.19",
+    "version": "26.5.20",
     "type": "module",
     "author": "Kevin Huang",
     "scripts": {
@@ -41,6 +41,6 @@
         "eslint-plugin-jsx-a11y": "^6.10.2",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.59.4",
-        "vitest": "^4.1.6"
+        "vitest": "^4.1.7"
     }
 }

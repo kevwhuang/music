@@ -51,7 +51,7 @@ function PlayingDots() {
                 <div
                     key={i}
                     className="w-0.5 h-3.5 bg-[var(--color-orange-80)]"
-                    style={{ animation: `player__vu-bounce 0.7s ease-in-out ${i * 0.1}s infinite`, transformOrigin: 'center' }}
+                    style={{ animation: `player__vu-bounce 0.6s ease-in-out ${i * 0.1}s infinite`, transformOrigin: 'center' }}
                 />
             ))}
         </div>
@@ -72,7 +72,7 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
 
     return (
         <div
-            className={`catalog__row grid items-center gap-3.5 px-5 py-[clamp(0.875rem,calc(0.67rem+1.04vw),1.5rem)] text-sm transition-[background] duration-150 delay-[15ms] cursor-pointer ${isPlaying ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''}`}
+            className={`catalog__row grid items-center gap-3.5 px-5 py-6 text-sm transition-[background] duration-150 delay-[15ms] cursor-pointer ${isPlaying ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''}`}
             role="button"
             style={{ boxShadow: idx ? 'inset 0 1px 0 var(--color-white-20)' : 'none' }}
             tabIndex={0}
@@ -88,7 +88,7 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
                 }
             }}
         >
-            <div className="hidden md:flex items-center justify-center">
+            <div className="flex items-center justify-center">
                 {isPlaying
                     ? <PlayingDots />
                     : t.star
@@ -107,12 +107,12 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
                                 )
                             : null}
             </div>
-            <span className="hidden md:inline text-[0.8125rem] tracking-[0.04em] tabular-nums text-zinc-400">{t.id}</span>
+            <span className="text-[0.8125rem] tracking-[0.04em] tabular-nums text-zinc-400">{t.id}</span>
             <div className="min-w-0 flex flex-col gap-[5px]">
                 <div className={`catalog__track-title font-medium text-sm truncate tracking-[-0.005em] leading-[1.2] font-inter ${t.title ? 'text-zinc-100' : 'text-zinc-500 italic'}`}>
                     {t.title || ' '}
                 </div>
-                <div className="flex flex-wrap items-center gap-3.5 min-h-4 text-xs tracking-[0.02em] [font-family:var(--font-mono)] text-zinc-500">
+                <div className="flex items-center gap-3.5 min-h-4 text-xs tracking-[0.02em] [font-family:var(--font-mono)] text-zinc-500">
                     {t.bpm.length > 0 && (
                         <span className="inline-flex items-center gap-1.5">
                             <span className="text-[0.625rem] tracking-[0.18em] text-zinc-500">BPM</span>
@@ -127,8 +127,8 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
                     )}
                 </div>
             </div>
-            <span className="hidden md:inline text-[0.8125rem] tabular-nums text-zinc-400">{t.title ? t.year : ''}</span>
-            <span className="hidden md:inline text-[0.8125rem] tabular-nums text-zinc-400">{t.title ? fmtDuration(t.duration) : ''}</span>
+            <span className="text-[0.8125rem] tabular-nums text-zinc-400">{t.title ? t.year : ''}</span>
+            <span className="text-[0.8125rem] tabular-nums text-zinc-400">{t.title ? fmtDuration(t.duration) : ''}</span>
             <div className="flex gap-1.5 justify-start" aria-label="Download options" role="toolbar" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                 <DLLink disabled={!t.master} href={`/audio/${slug}.mp3`} title="Download MP3">MP3</DLLink>
                 <DLBtn disabled={!t.master} title={t.master ? 'Download WAV master' : 'No master available'} onClick={() => pin.open(t, 'master')}>WAV</DLBtn>

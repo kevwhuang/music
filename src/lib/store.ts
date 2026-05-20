@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-
-import { TRACKS } from '@lib/tracks';
+import { useSyncExternalStore } from 'react';
 
 interface PlayerState {
     collapsed: boolean;
@@ -26,24 +24,22 @@ const INITIAL: PlayerState = {
     volume: 0.78,
 };
 
-const _global = typeof window !== 'undefined' ? window as unknown as Record<string, unknown> : {} as Record<string, unknown>;
-
 function createPlayerStore() {
-    let audio: HTMLAudioElement | null = (_global.__player_audio as HTMLAudioElement) || null;
+    let audio: HTMLAudioElement | null = null;
     let raf: number | null = null;
 
     const restore = (): PlayerState => {
         try {
-            const j = JSON.parse(localStorage.getItem('player') || 'null');
+            const saved = JSON.parse(localStorage.getItem('player') || 'null');
 
-            if (j && typeof j === 'object') {
+            if (saved && typeof saved === 'object') {
                 return {
                     ...INITIAL,
-                    collapsed: j.collapsed ?? INITIAL.collapsed,
-                    highpass: j.highpass ?? INITIAL.highpass,
-                    lowpass: j.lowpass ?? INITIAL.lowpass,
-                    repeat: j.repeat ?? INITIAL.repeat,
-                    volume: j.volume ?? INITIAL.volume,
+                    collapsed: saved.collapsed ?? INITIAL.collapsed,
+                    highpass: saved.highpass ?? INITIAL.highpass,
+                    lowpass: saved.lowpass ?? INITIAL.lowpass,
+                    repeat: saved.repeat ?? INITIAL.repeat,
+                    volume: saved.volume ?? INITIAL.volume,
                 };
             }
         } catch {
@@ -54,14 +50,14 @@ function createPlayerStore() {
     };
 
     const store = {
-        listeners: new Set<(s: PlayerState) => void>(),
+        listeners: new Set<(state: PlayerState) => void>(),
         state: restore(),
 
         get() {
             return store.state;
         },
 
-        subscribe(fn: (s: PlayerState) => void) {
+        subscribe(fn: (state: PlayerState) => void) {
             store.listeners.add(fn);
 
             return () => {
@@ -69,13 +65,13 @@ function createPlayerStore() {
             };
         },
 
-        _emit() {
+        emit() {
             for (const fn of store.listeners) {
                 fn(store.state);
             }
         },
 
-        _save() {
+        save() {
             try {
                 localStorage.setItem('player', JSON.stringify({
                     collapsed: store.state.collapsed,
@@ -91,25 +87,24 @@ function createPlayerStore() {
 
         set(patch: Partial<PlayerState>) {
             store.state = { ...store.state, ...patch };
-            store._save();
-            store._emit();
+            store.save();
+            store.emit();
         },
 
         getAudio(): HTMLAudioElement {
             if (!audio) {
                 audio = new Audio();
-                _global.__player_audio = audio;
                 audio.volume = store.state.volume;
 
                 const tick = () => {
                     store.state = { ...store.state, position: audio!.currentTime };
-                    store._emit();
+                    store.emit();
                     raf = requestAnimationFrame(tick);
                 };
 
                 audio.addEventListener('loadedmetadata', () => {
                     store.state = { ...store.state, duration: audio!.duration };
-                    store._emit();
+                    store.emit();
                 });
 
                 audio.addEventListener('ended', () => {
@@ -128,12 +123,12 @@ function createPlayerStore() {
                     }
 
                     store.state = { ...store.state, playing: false };
-                    store._emit();
+                    store.emit();
                 });
 
                 audio.addEventListener('play', () => {
                     store.state = { ...store.state, playing: true };
-                    store._emit();
+                    store.emit();
 
                     if (!raf) {
                         raf = requestAnimationFrame(tick);
@@ -171,21 +166,21 @@ function createPlayerStore() {
             el.load();
         },
 
-        seek(pos: number) {
+        seek(position: number) {
             const el = store.getAudio();
-            const clamped = Math.max(0, Math.min(pos, el.duration || store.state.duration));
+            const clamped = Math.max(0, Math.min(position, el.duration || store.state.duration));
             el.currentTime = clamped;
             store.set({ position: clamped });
         },
 
-        setRepeat(r: boolean) {
-            store.set({ repeat: r });
+        setRepeat(repeat: boolean) {
+            store.set({ repeat });
         },
 
-        setVolume(v: number) {
+        setVolume(volume: number) {
             const el = store.getAudio();
-            el.volume = v;
-            store.set({ volume: v });
+            el.volume = volume;
+            store.set({ volume });
         },
 
         toggle() {
@@ -206,16 +201,6 @@ function createPlayerStore() {
 
 export const PLAYER = createPlayerStore();
 
-export function useCurrentTrack(): Track | null {
-    const s = usePlayer();
-
-    if (!s.trackId) return null;
-
-    return TRACKS.find(t => t.id === s.trackId) ?? null;
-}
-
 export function usePlayer(): PlayerState {
-    const [s, setS] = useState(PLAYER.get());
-    useEffect(() => PLAYER.subscribe(setS), []);
-    return s;
+    return useSyncExternalStore(PLAYER.subscribe, PLAYER.get);
 }

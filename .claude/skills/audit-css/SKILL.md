@@ -4,8 +4,7 @@ name: audit-css
 user-invocable: true
 ---
 
-Audit `.css` files and `<style>` blocks in `.astro` files.
-Skip paths in `.gitignore`.
+Audit `.css` files and `<style>` blocks in `.astro` files. Skip paths in `.gitignore`.
 
 ## Property Order
 

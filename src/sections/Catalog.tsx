@@ -1,17 +1,24 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import { ALL_KEYS, TRACKS, YEARS } from '@lib/tracks';
-import { BPM_MAX, BPM_MIN, buildSlug, categoryLabel, fmtDuration, nextSort } from '@lib/utils';
+import { buildSlug, categoryLabel, fmtDuration } from '@lib/utils';
 import { usePlayer } from '@lib/store';
-import { useTrackList } from '@lib/hooks';
 import { CatalogRow } from '@components/CatalogRow';
-import { ErrorBoundary } from '@components/ErrorBoundary';
 import { ChevronIcon } from '@components/ChevronIcon';
+import { ErrorBoundary } from '@components/ErrorBoundary';
 import { HeartIcon } from '@components/HeartIcon';
 import { SearchIcon } from '@components/SearchIcon';
 import { StarIcon } from '@components/StarIcon';
 
-import type { TrackListState } from '@lib/hooks';
+interface CategoryFilters {
+    music: boolean;
+    productions: boolean;
+    sessions: boolean;
+}
+
+interface FavoriteFilters {
+    heart: boolean;
+    star: boolean;
+}
 
 interface PinModalActions {
     close: () => void;
@@ -23,7 +30,45 @@ interface PinModalTarget {
     track: Track;
 }
 
+interface SortConfig {
+    dir: 'asc' | 'desc';
+    field: string;
+}
+
+type TrackListState = ReturnType<typeof useTrackList>;
+
+const BPM_MAX = 180;
+const BPM_MIN = 50;
+
+const PAGE_SIZE = 50;
 const PinModalContext = createContext<PinModalActions | null>(null);
+
+function allKeys(tracks: Track[]): string[] {
+    const keys = new Set<string>();
+
+    for (const track of tracks) {
+        for (const key of track.key) {
+            keys.add(key);
+        }
+    }
+
+    return [...keys].sort();
+}
+
+function allYears(tracks: Track[]): number[] {
+    const years = new Set<number>();
+
+    for (const track of tracks) {
+        years.add(track.year);
+    }
+
+    return [...years].sort((a, b) => a - b);
+}
+
+function bpmNum(bpm: string[]): number | null {
+    const value = parseInt(bpm[0], 10);
+    return Number.isFinite(value) ? value : null;
+}
 
 function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v: [number, number]) => void }) {
     const [lo, hi] = value;
@@ -33,10 +78,10 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
         const move = (ev: MouseEvent) => {
             if (!trackRef.current) return;
             const rect = trackRef.current.getBoundingClientRect();
-            const x = (ev.clientX - rect.left) / rect.width;
-            const v = Math.round(BPM_MIN + Math.max(0, Math.min(1, x)) * (BPM_MAX - BPM_MIN));
-            if (which === 'lo') onChange([Math.min(v, hi - 1), hi]);
-            else onChange([lo, Math.max(v, lo + 1)]);
+            const ratio = (ev.clientX - rect.left) / rect.width;
+            const bpm = Math.round(BPM_MIN + Math.max(0, Math.min(1, ratio)) * (BPM_MAX - BPM_MIN));
+            if (which === 'lo') onChange([Math.min(bpm, hi - 1), hi]);
+            else onChange([lo, Math.max(bpm, lo + 1)]);
         };
         const up = () => {
             window.removeEventListener('mousemove', move);
@@ -91,8 +136,8 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
     );
 }
 
-function CatalogInner() {
-    const list = useTrackList(TRACKS);
+function CatalogInner({ tracks }: { tracks: Track[] }) {
+    const list = useTrackList(tracks);
     const pin = usePinModal();
     const player = usePlayer();
     const sectionRef = useRef<HTMLElement>(null);
@@ -103,25 +148,25 @@ function CatalogInner() {
     };
 
     return (
-        <section ref={sectionRef} className="px-[clamp(1rem,calc(0.5rem+2.5vw),2.5rem)] py-[clamp(5rem,calc(3rem+10vw),12rem)] font-mono text-sm">
+        <section ref={sectionRef} className="px-10 py-48 font-mono text-sm">
             <div className="max-w-[92.5rem] mx-auto">
-                <div className="flex flex-wrap items-baseline justify-between gap-6 mb-8">
-                    <h2 className="catalog__heading m-0 font-medium font-inter text-[clamp(2rem,calc(1.5rem+2.5vw),3.5rem)] tracking-[-0.025em]">
+                <div className="flex items-baseline justify-between gap-6 mb-8">
+                    <h2 className="catalog__heading m-0 font-medium font-inter text-4xl tracking-[-0.025em]">
                         Catalog
                     </h2>
-                    <span className="text-[clamp(0.75rem,calc(0.58rem+0.83vw),1.25rem)] tracking-[0.02em] [font-family:var(--font-mono)] text-zinc-400">
+                    <span className="text-xl tracking-[0.02em] [font-family:var(--font-mono)] text-zinc-400">
                         {list.total}
                         {' of '}
-                        {TRACKS.length}
+                        {tracks.length}
                     </span>
                 </div>
-                <Filters list={list} />
+                <Filters list={list} tracks={tracks} />
                 <div className="catalog__row grid items-center gap-3.5 px-5 py-3.5 mt-6 border border-zinc-800 text-[0.6875rem] tracking-[0.22em] bg-zinc-900 text-zinc-400">
-                    <span className="hidden md:inline" />
-                    <SortHeader className="hidden md:inline-flex" field="id" label="ID" list={list} />
+                    <span />
+                    <SortHeader field="id" label="ID" list={list} />
                     <SortHeader field="title" label="TITLE" list={list} />
-                    <SortHeader className="hidden md:inline-flex" field="year" label="YEAR" list={list} />
-                    <SortHeader className="hidden md:inline-flex" field="duration" label="LENGTH" list={list} />
+                    <SortHeader field="year" label="YEAR" list={list} />
+                    <SortHeader field="duration" label="LENGTH" list={list} />
                     <span className="text-left">DOWNLOAD</span>
                 </div>
                 <div className="border border-zinc-800 border-t-0">
@@ -182,24 +227,24 @@ function FavChip({ active, color, icon, title, onClick }: {
     );
 }
 
-function Filters({ list }: { list: TrackListState }) {
+function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
     return (
-        <div className="flex flex-col gap-5 p-[clamp(1rem,calc(0.75rem+1.25vw),1.75rem)] rounded-sm border border-zinc-800 bg-zinc-800">
-            <div className="flex flex-wrap items-center gap-3.5">
-                <div className="flex flex-[1_1_320px] items-center min-w-[260px] gap-3 px-4 py-3 rounded-sm bg-zinc-900">
+        <div className="flex flex-col gap-5 p-7 rounded-sm border border-zinc-800 bg-zinc-800">
+            <div className="flex items-center gap-3.5">
+                <div className="flex flex-1 items-center gap-3 px-4 py-3 rounded-sm bg-zinc-900">
                     <SearchIcon />
                     <input
                         className="flex-1 border-none text-sm [font-family:inherit] bg-transparent text-zinc-100 outline-none"
                         placeholder="search by title or id"
                         type="text"
-                        value={list.q}
-                        onChange={e => list.setQ(e.target.value)}
+                        value={list.query}
+                        onChange={e => list.setQuery(e.target.value)}
                     />
-                    {list.q && (
+                    {list.query && (
                         <button
                             aria-label="Clear search"
                             className="border-none text-[0.8125rem] [font-family:inherit] bg-none text-zinc-400 cursor-pointer"
-                            onClick={() => list.setQ('')}
+                            onClick={() => list.setQuery('')}
                         >
                             ✕
                         </button>
@@ -209,7 +254,7 @@ function Filters({ list }: { list: TrackListState }) {
                     {(['music', 'sessions', 'productions'] as const).map(c => (
                         <button
                             key={c}
-                            className={`catalog__category-btn px-[clamp(0.75rem,calc(0.63rem+0.62vw),1.125rem)] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-all duration-150 cursor-pointer ${list.cats[c] ? 'catalog__category-btn--active' : 'text-zinc-400'}`}
+                            className={`catalog__category-btn px-[1.125rem] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-all duration-150 cursor-pointer ${list.cats[c] ? 'catalog__category-btn--active' : 'text-zinc-400'}`}
                             onClick={() => list.setCats({ ...list.cats, [c]: !list.cats[c] })}
                         >
                             {categoryLabel(c).toUpperCase()}
@@ -221,9 +266,9 @@ function Filters({ list }: { list: TrackListState }) {
                     <FavChip active={list.favs.heart} color="var(--color-rose)" icon={<HeartIcon />} title="Hearted only" onClick={() => list.setFavs({ ...list.favs, heart: !list.favs.heart })} />
                 </div>
             </div>
-            <div className="grid grid-cols-1 items-end gap-[clamp(0.75rem,calc(0.63rem+0.62vw),1.125rem)] sm:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px]">
-                <MultiSelect label="YEAR" options={YEARS.map(y => [y, String(y)] as [number, string])} placeholder="All" selected={list.years} onChange={list.setYears} />
-                <MultiSelect label="KEY" options={ALL_KEYS.map(k => [k, k] as [string, string])} placeholder="All" selected={list.keys} onChange={list.setKeys} />
+            <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-[1.125rem]">
+                <MultiSelect label="YEAR" options={allYears(tracks).map(y => [y, String(y)] as [number, string])} placeholder="All" selected={list.years} onChange={list.setYears} />
+                <MultiSelect label="KEY" options={allKeys(tracks).map(k => [k, k] as [string, string])} placeholder="All" selected={list.keys} onChange={list.setKeys} />
                 <BPMSlider value={list.bpmRange} onChange={list.setBpmRange} />
             </div>
         </div>
@@ -390,7 +435,7 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
     }
 
     return (
-        <div className="flex flex-wrap items-center justify-between mt-7 text-xs tracking-[0.16em]">
+        <div className="flex items-center justify-between mt-7 text-xs tracking-[0.16em]">
             <span className="text-zinc-400">
                 {list.total === 0 ? '0' : `${list.page * list.PAGE_SIZE + 1}–${Math.min((list.page + 1) * list.PAGE_SIZE, list.total)}`}
                 {' OF '}
@@ -419,6 +464,7 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
     target: PinModalTarget;
 }) {
     const formRef = useRef<HTMLFormElement>(null);
+    const pinInputId = useId();
     const slug = buildSlug(target.track.id, target.track.title);
 
     useEffect(() => {
@@ -491,14 +537,14 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                 </div>
                 <label
                     className="block mb-2 text-[0.6875rem] tracking-[0.18em] text-zinc-400"
-                    htmlFor="pin-input"
+                    htmlFor={pinInputId}
                 >
                     AUTHORIZATION
                 </label>
                 <input
                     className={`pin-modal__input w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150 ${state === 'error' ? 'pin-modal__input--error' : ''}`}
                     autoComplete="off"
-                    id="pin-input"
+                    id={pinInputId}
                     maxLength={6}
                     placeholder="• • • •"
                     ref={inputRef}
@@ -545,20 +591,20 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
 
-    const open = useCallback((track: Track, kind: 'master' | 'mixdown') => {
-        triggerRef.current = document.activeElement as HTMLElement;
-        setTarget({ kind, track });
-        setPin('');
-        setState('idle');
-    }, []);
-
-    const close = useCallback(() => {
+    const close = () => {
         setTarget(null);
         setPin('');
         setState('idle');
         triggerRef.current?.focus();
         triggerRef.current = null;
-    }, []);
+    };
+
+    const open = (track: Track, kind: 'master' | 'mixdown') => {
+        triggerRef.current = document.activeElement as HTMLElement;
+        setTarget({ kind, track });
+        setPin('');
+        setState('idle');
+    };
 
     useEffect(() => {
         if (target) setTimeout(() => inputRef.current?.focus(), 50);
@@ -604,13 +650,17 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-function SortHeader({ className, field, label, list }: { className?: string; field: string; label: string; list: TrackListState }) {
+function SortHeader({ field, label, list }: { field: string; label: string; list: TrackListState }) {
     const active = list.sort.field === field;
 
     return (
         <button
-            className={`catalog__sort-btn inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer select-none ${active ? 'text-[var(--color-orange-80)]' : 'text-zinc-400'} ${className || ''}`}
-            onClick={() => list.setSort(nextSort(list.sort, field))}
+            className={`catalog__sort-btn inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer select-none ${active ? 'text-[var(--color-orange-80)]' : 'text-zinc-400'}`}
+            onClick={() => {
+                if (list.sort.field !== field) list.setSort({ dir: 'asc', field });
+                else if (list.sort.dir === 'asc') list.setSort({ dir: 'desc', field });
+                else list.setSort({ dir: 'asc', field: 'id' });
+            }}
         >
             {label}
             {active && (
@@ -624,11 +674,111 @@ function usePinModal() {
     return useContext(PinModalContext)!;
 }
 
-export default function Catalog() {
+function useTrackList(tracks: Track[]) {
+    const [bpmRange, setBpmRange] = useState<[number, number]>([BPM_MIN, BPM_MAX]);
+    const [cats, setCats] = useState<CategoryFilters>({ music: true, productions: true, sessions: true });
+    const [favs, setFavs] = useState<FavoriteFilters>({ heart: false, star: false });
+    const [keys, setKeys] = useState<string[]>([]);
+    const [page, setPage] = useState(0);
+    const [query, setQuery] = useState('');
+    const [sort, setSort] = useState<SortConfig>({ dir: 'asc', field: 'id' });
+    const [years, setYears] = useState<number[]>([]);
+
+    const filtered = useMemo(() => {
+        let results = tracks.filter(t => cats[t.category]);
+
+        if (query.trim()) {
+            const needle = query.trim().toLowerCase();
+            results = results.filter(t =>
+                (t.title || '').toLowerCase().includes(needle)
+                || t.id.toLowerCase().includes(needle),
+            );
+        }
+
+        if (years.length) {
+            results = results.filter(t => years.includes(t.year));
+        }
+
+        if (keys.length) {
+            results = results.filter(t => t.key.some(k => keys.includes(k)));
+        }
+
+        if (favs.star && favs.heart) {
+            results = results.filter(t => t.star || t.heart);
+        } else if (favs.star) {
+            results = results.filter(t => t.star);
+        } else if (favs.heart) {
+            results = results.filter(t => t.heart);
+        }
+
+        results = results.filter((t) => {
+            const value = bpmNum(t.bpm);
+
+            if (value === null) {
+                return bpmRange[0] === BPM_MIN && bpmRange[1] === BPM_MAX;
+            }
+
+            return value >= bpmRange[0] && value <= bpmRange[1];
+        });
+
+        const direction = sort.dir === 'asc' ? 1 : -1;
+
+        results = [...results].sort((a, b) => {
+            let valA: string | number, valB: string | number;
+
+            if (sort.field === 'title') {
+                valA = (a.title || '~~~').toLowerCase();
+                valB = (b.title || '~~~').toLowerCase();
+            } else if (sort.field === 'year') {
+                valA = a.year;
+                valB = b.year;
+            } else if (sort.field === 'duration') {
+                valA = a.duration;
+                valB = b.duration;
+            } else if (sort.field === 'bpm') {
+                valA = bpmNum(a.bpm) ?? 9999;
+                valB = bpmNum(b.bpm) ?? 9999;
+            } else if (sort.field === 'key') {
+                valA = (a.key[0]) || '~~~';
+                valB = (b.key[0]) || '~~~';
+            } else {
+                valA = a.id;
+                valB = b.id;
+            }
+
+            return valA < valB ? -direction : valA > valB ? direction : 0;
+        });
+
+        return results;
+    }, [bpmRange, cats, favs, keys, query, sort, tracks, years]);
+
+    useEffect(() => setPage(0), [bpmRange, cats, favs, keys, query, sort, years]);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+    return {
+        PAGE_SIZE,
+        bpmRange, setBpmRange,
+        cats, setCats,
+        favs, setFavs,
+        filtered,
+        keys, setKeys,
+        page, setPage,
+        pageCount,
+        query, setQuery,
+        sort, setSort,
+        total: filtered.length,
+        visible,
+        years, setYears,
+    };
+}
+
+export default function Catalog({ tracks }: { tracks: Track[] }) {
     return (
         <ErrorBoundary>
             <PinModalProvider>
-                <CatalogInner />
+                <CatalogInner tracks={tracks} />
             </PinModalProvider>
         </ErrorBoundary>
     );

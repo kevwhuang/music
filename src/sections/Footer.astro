@@ -6,13 +6,13 @@ const links = [
 ];
 ---
 
-<footer class="px-[clamp(1rem,calc(0.5rem+2.5vw),2.5rem)] py-[clamp(2.5rem,calc(1.5rem+5vw),6rem)] border-t border-white-20 bg-zinc-950">
-    <div class="flex flex-wrap items-start justify-between max-w-[80rem] gap-6 mx-auto">
+<footer class="px-10 py-24 border-t border-white-20 bg-zinc-950">
+    <div class="flex items-start justify-between max-w-[80rem] gap-6 mx-auto">
         <div>
             <a class="footer__brand mb-1.5 font-medium font-inter text-base tracking-[-0.01em] no-underline text-zinc-100" href="https://aephonics.com">aephonics</a>
             <div class="text-[0.8125rem] text-zinc-400">&copy; 2026. All rights reserved.</div>
         </div>
-        <div class="flex flex-wrap gap-9 text-xs tracking-[0.14em]">
+        <div class="flex gap-9 text-xs tracking-[0.14em]">
             {links.map(({ href, label, value }) => (
                 <div class="flex flex-col gap-1.5 font-mono">
                     <span class="text-[0.625rem] tracking-[0.22em] text-zinc-500">{label}</span>

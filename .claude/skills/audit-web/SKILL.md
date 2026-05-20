@@ -4,8 +4,7 @@ name: audit-web
 user-invocable: true
 ---
 
-Audit the web project against the checklist below.
-Skip paths in `.gitignore`.
+Audit the web project against the checklist below. Skip paths in `.gitignore`.
 
 ## Code Quality
 

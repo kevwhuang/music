@@ -1,12 +1,15 @@
 import type { Config, Context } from '@netlify/edge-functions';
 
-const MAX_REQUESTS = 10;
+const MAX_REQUESTS = 20;
 const WINDOW_MS = 60000;
 
 const hits = new Map<string, number[]>();
 
 export default function (request: Request, context: Context) {
     const ip = context.ip || 'unknown';
+
+    if (ip === '::1' || ip === '127.0.0.1') return context.next();
+
     const now = Date.now();
     const timestamps = (hits.get(ip) || []).filter(t => now - t < WINDOW_MS);
 

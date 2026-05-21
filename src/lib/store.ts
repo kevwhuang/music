@@ -25,8 +25,32 @@ const INITIAL: PlayerState = {
 };
 
 function createPlayerStore() {
+    let analyserL: AnalyserNode | null = null;
+    let analyserR: AnalyserNode | null = null;
     let audio: HTMLAudioElement | null = null;
+    let audioCtx: AudioContext | null = null;
+    let gainNode: GainNode | null = null;
+    let hpFilter: BiquadFilterNode | null = null;
+    let lpFilter: BiquadFilterNode | null = null;
     let raf: number | null = null;
+    let timeBufL: Float32Array<ArrayBuffer> | null = null;
+    let timeBufR: Float32Array<ArrayBuffer> | null = null;
+
+    const FILTER_Q = 0.707;
+    const FILTER_SMOOTH = 0.015;
+    const HP_MAX = 5000;
+    const HP_MIN = 20;
+    const LP_MAX = 20000;
+    const LP_MIN = 200;
+    const VU_SCALE = 2.5;
+
+    function mapLowpass(v: number): number {
+        return LP_MIN * Math.pow(LP_MAX / LP_MIN, v);
+    }
+
+    function mapHighpass(v: number): number {
+        return HP_MIN * Math.pow(HP_MAX / HP_MIN, v);
+    }
 
     const restore = (): PlayerState => {
         try {
@@ -63,8 +87,44 @@ function createPlayerStore() {
         getAudio(): HTMLAudioElement {
             if (!audio) {
                 audio = new Audio();
-                audio.volume = store.state.volume;
+                audio.crossOrigin = 'anonymous';
                 const element = audio;
+
+                audioCtx = new AudioContext();
+                const source = audioCtx.createMediaElementSource(element);
+
+                lpFilter = audioCtx.createBiquadFilter();
+                lpFilter.type = 'lowpass';
+                lpFilter.Q.value = FILTER_Q;
+                lpFilter.frequency.value = mapLowpass(store.state.lowpass);
+                hpFilter = audioCtx.createBiquadFilter();
+                hpFilter.type = 'highpass';
+                hpFilter.Q.value = FILTER_Q;
+                hpFilter.frequency.value = mapHighpass(store.state.highpass);
+                gainNode = audioCtx.createGain();
+                gainNode.gain.value = store.state.volume;
+                const limiter = audioCtx.createDynamicsCompressor();
+                limiter.threshold.value = 0;
+                limiter.knee.value = 0;
+                limiter.ratio.value = 20;
+                limiter.attack.value = 0.001;
+                limiter.release.value = 0.01;
+                const splitter = audioCtx.createChannelSplitter(2);
+                analyserL = audioCtx.createAnalyser();
+                analyserR = audioCtx.createAnalyser();
+                analyserL.fftSize = 1024;
+                analyserR.fftSize = 1024;
+                timeBufL = new Float32Array(analyserL.fftSize);
+                timeBufR = new Float32Array(analyserR.fftSize);
+
+                source.connect(lpFilter);
+                lpFilter.connect(hpFilter);
+                hpFilter.connect(gainNode);
+                gainNode.connect(limiter);
+                limiter.connect(audioCtx.destination);
+                limiter.connect(splitter);
+                splitter.connect(analyserL, 0);
+                splitter.connect(analyserR, 1);
 
                 const tick = () => {
                     store.state = { ...store.state, position: element.currentTime };
@@ -99,6 +159,7 @@ function createPlayerStore() {
                 });
 
                 element.addEventListener('play', () => {
+                    if (audioCtx?.state === 'suspended') audioCtx.resume();
                     store.state = { ...store.state, playing: true };
                     store.emit();
 
@@ -109,6 +170,23 @@ function createPlayerStore() {
             }
 
             return audio;
+        },
+
+        getLevels(): [number, number] {
+            if (!analyserL || !analyserR || !timeBufL || !timeBufR) return [0, 0];
+            analyserL.getFloatTimeDomainData(timeBufL);
+            analyserR.getFloatTimeDomainData(timeBufR);
+            let sumL = 0;
+            let sumR = 0;
+
+            for (let i = 0; i < timeBufL.length; i++) {
+                sumL += timeBufL[i] * timeBufL[i];
+                sumR += timeBufR[i] * timeBufR[i];
+            }
+
+            const rmsL = Math.sqrt(sumL / timeBufL.length);
+            const rmsR = Math.sqrt(sumR / timeBufR.length);
+            return [Math.min(1, rmsL * VU_SCALE), Math.min(1, rmsR * VU_SCALE)];
         },
 
         listeners: new Set<(state: PlayerState) => void>(),
@@ -163,6 +241,15 @@ function createPlayerStore() {
 
         set(patch: Partial<PlayerState>) {
             store.state = { ...store.state, ...patch };
+
+            if (patch.lowpass !== undefined && lpFilter && audioCtx) {
+                lpFilter.frequency.setTargetAtTime(mapLowpass(patch.lowpass), audioCtx.currentTime, FILTER_SMOOTH);
+            }
+
+            if (patch.highpass !== undefined && hpFilter && audioCtx) {
+                hpFilter.frequency.setTargetAtTime(mapHighpass(patch.highpass), audioCtx.currentTime, FILTER_SMOOTH);
+            }
+
             store.save();
             store.emit();
         },
@@ -172,8 +259,10 @@ function createPlayerStore() {
         },
 
         setVolume(volume: number) {
-            const el = store.getAudio();
-            el.volume = volume;
+            if (gainNode && audioCtx) {
+                gainNode.gain.setTargetAtTime(volume, audioCtx.currentTime, FILTER_SMOOTH);
+            }
+
             store.set({ volume });
         },
 

@@ -8,27 +8,8 @@ import { RepeatIcon } from '@components/RepeatIcon';
 import { categoryLabel, formatDuration } from '@lib/utils';
 
 const BARS_AREA_HEIGHT = 84;
-const DURATION_HASH_FACTOR = 17;
-const ENV2_FREQ_BASE = 0.009;
-const ENV2_FREQ_RANGE = 0.012;
-const ENV_FREQ_BASE = 0.035;
-const ENV_FREQ_RANGE = 0.04;
-const ENV_MIX = 0.65;
-const ENV_PRIMARY_WEIGHT = 0.55;
-const ENV_SECONDARY_WEIGHT = 0.45;
-const FADE_BARS = 6;
 const FADER_HEIGHT = 64;
 const FADER_TICKS = [0.25, 0.5, 0.75];
-const HASH_PRIME = 31;
-const JITTER_AMPLITUDE = 0.12;
-const JITTER_FREQ = 0.6;
-const JITTER_MIX = 0.4;
-const LCG_INCREMENT = 1013904223;
-const LCG_MULTIPLIER = 1664525;
-const NOISE_MIX = 0.25;
-const PEAK_MIN = 0.08;
-const PULSE_RANGE = 0.08;
-const PULSE_STRENGTH = 0.18;
 const REEL_SIZE = 56;
 const REEL_SPOKE_DEGREES = [0, 60, 120, 180, 240, 300];
 const SEEK_STEP = 5;
@@ -39,26 +20,13 @@ const TICK_LONG_THRESHOLD = 180;
 const TICK_MEDIUM_STEP = 20;
 const TICK_MEDIUM_THRESHOLD = 60;
 const TICK_SHORT_STEP = 10;
-const VU_ANIM_INTERVAL = 100;
-const VU_DECAY_INTERVAL = 80;
-const VU_DECAY_RATE = 0.85;
+const VU_DECAY = 0.88;
 const VU_FLOOR = 0.04;
-const VU_INITIAL = 0.1;
-const VU_LEFT_BASE = 0.55;
-const VU_LEFT_FREQ = 1.7;
-const VU_LEFT_SWING = 0.18;
-const VU_PHASE_STEP = 0.06;
-const VU_RIGHT_BASE = 0.5;
-const VU_RIGHT_FREQ = 2.1;
-const VU_RIGHT_PHASE_OFFSET = 0.7;
-const VU_RIGHT_SWING = 0.22;
 const VU_SEGS = 16;
 const WAVEFORM_AMPLITUDE = 88;
-const WAVEFORM_BARS = 180;
 const WAVEFORM_HEIGHT = BARS_AREA_HEIGHT + TICK_AREA_HEIGHT;
 
 let trackList: Track[] = [];
-const WAVEFORM_CACHE: Record<string, number[]> = {};
 
 function formatCounter(seconds: number): string {
     const minutes = Math.floor(seconds / 60);
@@ -227,7 +195,7 @@ function Waveform() {
     const ref = useRef<HTMLDivElement>(null);
     const [hoverPos, setHoverPos] = useState<number | null>(null);
     const [hoverPx, setHoverPx] = useState<number | null>(null);
-    const peaks = track ? generateWaveform(track.id, track.duration) : null;
+    const peaks = track?.peaks.length ? track.peaks : null;
     const duration = player.duration || track?.duration || 0;
     const playedFrac = duration ? player.position / duration : 0;
 
@@ -282,13 +250,7 @@ function Waveform() {
                         {peaks.map((p, i) => {
                             const x = i * 2 + 0.5;
                             const isPlayed = (i / peaks.length) <= playedFrac;
-                            const distFromHead = Math.abs(i / peaks.length - playedFrac);
-                            let pulse = 1;
-
-                            if (player.playing && isPlayed && distFromHead < PULSE_RANGE) {
-                                pulse = 1 + (1 - distFromHead / PULSE_RANGE) * PULSE_STRENGTH;
-                            }
-                            const h = p * WAVEFORM_AMPLITUDE * pulse;
+                            const h = p * WAVEFORM_AMPLITUDE;
                             const y = 50 - h / 2;
                             const inHover = hoverPx != null && (i / peaks.length) <= (hoverPx / (ref.current?.clientWidth || 1)) && !isPlayed;
                             let fill: string;
@@ -335,45 +297,6 @@ function Waveform() {
     );
 }
 
-function generateWaveform(id: string, duration: number): number[] {
-    const cacheKey = `${id}_${WAVEFORM_BARS}`;
-
-    if (WAVEFORM_CACHE[cacheKey]) return WAVEFORM_CACHE[cacheKey];
-
-    let seed = 0;
-
-    for (let i = 0; i < id.length; i++) {
-        seed = (seed * HASH_PRIME + id.charCodeAt(i)) >>> 0;
-    }
-
-    seed = (seed ^ Math.floor(duration * DURATION_HASH_FACTOR)) >>> 0;
-
-    const rand = () => {
-        seed = (seed * LCG_MULTIPLIER + LCG_INCREMENT) >>> 0;
-        return seed / 0xffffffff;
-    };
-
-    const peaks: number[] = [];
-    const envFreq = ENV_FREQ_BASE + rand() * ENV_FREQ_RANGE;
-    const envPhase = rand() * Math.PI * 2;
-    const env2Freq = ENV2_FREQ_BASE + rand() * ENV2_FREQ_RANGE;
-    const env2Phase = rand() * Math.PI * 2;
-
-    for (let i = 0; i < WAVEFORM_BARS; i++) {
-        const env = (Math.sin(i * envFreq + envPhase) * 0.5 + 0.5) * ENV_PRIMARY_WEIGHT
-            + (Math.sin(i * env2Freq + env2Phase) * 0.5 + 0.5) * ENV_SECONDARY_WEIGHT;
-        const noise = rand();
-        const jitter = Math.sin(i * JITTER_FREQ + rand() * Math.PI) * JITTER_AMPLITUDE;
-        let v = env * ENV_MIX + noise * NOISE_MIX + Math.abs(jitter) * JITTER_MIX;
-        const fade = Math.min(1, Math.min(i, WAVEFORM_BARS - i - 1) / FADE_BARS);
-        v *= fade;
-        peaks.push(Math.max(PEAK_MIN, Math.min(1, v)));
-    }
-
-    WAVEFORM_CACHE[cacheKey] = peaks;
-    return peaks;
-}
-
 function useCurrentTrack(): Track | null {
     const player = usePlayer();
 
@@ -383,32 +306,31 @@ function useCurrentTrack(): Track | null {
 }
 
 function useVU() {
-    const player = usePlayer();
-    const [levels, setLevels] = useState([VU_INITIAL, VU_INITIAL]);
+    const [levels, setLevels] = useState([0, 0]);
+    const smoothRef = useRef([0, 0]);
 
     useEffect(() => {
-        if (!player.playing) {
-            const decay = setInterval(() => {
-                setLevels(levels => levels.map(level => Math.max(VU_FLOOR, level * VU_DECAY_RATE)));
-            }, VU_DECAY_INTERVAL);
+        let raf: number;
+        let wasZero = true;
 
-            return () => clearInterval(decay);
-        }
+        const tick = () => {
+            const [rawL, rawR] = PLAYER.getLevels();
+            const prev = smoothRef.current;
+            const l = Math.max(rawL, prev[0] * VU_DECAY);
+            const r = Math.max(rawR, prev[1] * VU_DECAY);
+            smoothRef.current = [l, r];
+            const outL = l < VU_FLOOR ? 0 : l;
+            const outR = r < VU_FLOOR ? 0 : r;
+            const isZero = outL === 0 && outR === 0;
 
-        let phase = 0;
+            if (!isZero || !wasZero) setLevels([outL, outR]);
+            wasZero = isZero;
+            raf = requestAnimationFrame(tick);
+        };
 
-        const interval = setInterval(() => {
-            phase += VU_PHASE_STEP;
-            const base = VU_LEFT_BASE + Math.sin(phase * VU_LEFT_FREQ) * VU_LEFT_SWING;
-            const baseR = VU_RIGHT_BASE + Math.sin(phase * VU_RIGHT_FREQ + VU_RIGHT_PHASE_OFFSET) * VU_RIGHT_SWING;
-            setLevels([
-                Math.max(VU_FLOOR, Math.min(1, base + (Math.random() - 0.5) * VU_LEFT_SWING)),
-                Math.max(VU_FLOOR, Math.min(1, baseR + (Math.random() - 0.5) * VU_RIGHT_SWING)),
-            ]);
-        }, VU_ANIM_INTERVAL);
-
-        return () => clearInterval(interval);
-    }, [player.playing]);
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, []);
 
     return levels;
 }
@@ -499,8 +421,8 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
                 </div>
                 <div className="player__expandable flex items-center gap-3">
                     <div className="flex items-center gap-0.5" aria-hidden="true">
-                        <VUMeter label="L" level={player.playing ? vuLeft * player.volume : 0} />
-                        <VUMeter label="R" level={player.playing ? vuRight * player.volume : 0} />
+                        <VUMeter label="L" level={vuLeft} />
+                        <VUMeter label="R" level={vuRight} />
                     </div>
                     <Fader label="VOL" value={player.volume} onChange={volume => PLAYER.setVolume(volume)} />
                     <Fader label="LO" resetValue={1} value={player.lowpass} onChange={lowpass => PLAYER.set({ lowpass })} />

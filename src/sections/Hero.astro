@@ -27,10 +27,10 @@ const stats = [
             <br />
             <span class="hero__line text-[var(--color-orange-80)] opacity-0" aria-hidden="true">to master.</span>
         </h1>
-        <p class="hero__subtitle max-w-[49rem] text-2xl leading-relaxed font-inter text-zinc-300 opacity-0">
-            Frequencies shaped in a room in Austin since 2015. Original compositions, late-night sessions, ghost productions — moving between hip-hop, latin pop, ambient, and territories that resist classification.
+        <p class="hero__subtitle max-w-[49rem] font-mono text-lg tracking-[0.18em] uppercase leading-relaxed text-zinc-300 opacity-0">
+            Producer and engineer. A decade of craft. 5M+ streams. Minimal setup. Maximum signal. Untethered from genre. Based in Austin. Open to inquiries.
         </p>
-        <div
+        <dl
             class="hero__stats relative grid grid-cols-4 gap-8 mt-24 p-7 border border-zinc-800 bg-zinc-800 opacity-0"
         >
             <div class="hero__ticker absolute -top-9 right-7 grid justify-items-end w-fit h-7 overflow-hidden" aria-hidden="true">
@@ -42,13 +42,13 @@ const stats = [
             </div>
             {stats.map(({ accent, count, label }, i) => (
                 <div class={`pl-[1.125rem] ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
-                    <div class="mb-2.5 text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</div>
-                    <div class:list={['hero__stat-count font-medium text-[2.5rem] tracking-[-0.025em] leading-none font-inter', accent ? 'text-[var(--color-orange-80)]' : 'text-zinc-100']}>
+                    <dt class="mb-2.5 font-mono text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</dt>
+                    <dd class:list={['hero__stat-count font-medium text-[2.5rem] tracking-[-0.025em] leading-none font-inter', accent ? 'text-[var(--color-orange-80)]' : 'text-zinc-100']}>
                         {count}
-                    </div>
+                    </dd>
                 </div>
             ))}
-        </div>
+        </dl>
     </div>
 </section>
 
@@ -64,18 +64,19 @@ const stats = [
     const SECTION_DURATION = 0.5;
     const SECTION_Y = 30;
     const SLIDE = 0.5;
+    const TIMELINE_DELAY = 1;
 
     function cycle(distance: number, words: NodeListOf<HTMLElement>): void {
-        const tl = gsap.timeline({ onComplete: () => cycle(distance, words) });
+        const timeline = gsap.timeline({ onComplete: () => cycle(distance, words) });
 
-        tl.fromTo(words[0], { x: distance }, { duration: SLIDE, ease: 'power2.out', x: 0 });
+        timeline.fromTo(words[0], { x: distance }, { duration: SLIDE, ease: 'power2.out', x: 0 });
 
         for (let i = 0; i < words.length - 1; i++) {
-            tl.to(words[i], { duration: SLIDE, ease: 'power2.inOut', x: -distance }, `+=${HOLD}`);
-            tl.fromTo(words[i + 1], { x: distance }, { duration: SLIDE, ease: 'power2.inOut', x: 0 }, '<');
+            timeline.to(words[i], { duration: SLIDE, ease: 'power2.inOut', x: -distance }, `+=${HOLD}`);
+            timeline.fromTo(words[i + 1], { x: distance }, { duration: SLIDE, ease: 'power2.inOut', x: 0 }, '<');
         }
 
-        tl.to(words[words.length - 1], { duration: SLIDE, ease: 'power2.in', x: -distance }, `+=${HOLD}`);
+        timeline.to(words[words.length - 1], { duration: SLIDE, ease: 'power2.in', x: -distance }, `+=${HOLD}`);
     }
 
     function splitChars(el: HTMLElement): HTMLElement[] {
@@ -127,7 +128,7 @@ const stats = [
         }
 
         const chars = splitChars(lines[0]);
-        const master = gsap.timeline({ delay: 1 });
+        const master = gsap.timeline({ delay: TIMELINE_DELAY });
 
         gsap.set(lines[1], { y: LINE_Y });
         gsap.set(lines[2], { y: LINE_Y });

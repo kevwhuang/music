@@ -20,9 +20,6 @@ export default defineConfig({
     },
     site: 'https://music.aephonics.com',
     vite: {
-        optimizeDeps: {
-            exclude: ['astro/virtual-modules/prefetch.js'],
-        },
         plugins: [tailwind()],
     },
 });

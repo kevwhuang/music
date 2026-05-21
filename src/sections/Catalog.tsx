@@ -1,5 +1,5 @@
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Fragment, createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 
 import { CatalogRow } from '@components/CatalogRow';
@@ -8,10 +8,10 @@ import { ErrorBoundary } from '@components/ErrorBoundary';
 import { HeartIcon } from '@components/HeartIcon';
 import { SearchIcon } from '@components/SearchIcon';
 import { StarIcon } from '@components/StarIcon';
-import { buildSlug, categoryLabel, fmtDuration } from '@lib/utils';
+import { buildSlug, categoryLabel } from '@lib/utils';
 import { usePlayer } from '@lib/store';
 
-gsap.registerPlugin(ScrollTrigger);
+type TrackListState = ReturnType<typeof useTrackList>;
 
 interface CategoryFilters {
     music: boolean;
@@ -34,8 +34,6 @@ interface PinModalTarget {
     track: Track;
 }
 
-type TrackListState = ReturnType<typeof useTrackList>;
-
 interface SortConfig {
     dir: 'asc' | 'desc';
     field: string;
@@ -43,10 +41,15 @@ interface SortConfig {
 
 const BPM_MAX = 180;
 const BPM_MIN = 50;
+const ENTRANCE_DURATION = 0.5;
+const ENTRANCE_Y = 30;
 const FOCUS_DELAY = 50;
+const PAGE_ADJACENT = 2;
 const PAGE_SIZE = 50;
 const PIN_SUCCESS_DELAY = 1400;
 const PIN_VERIFY_DELAY = 600;
+const SORT_FALLBACK = 9999;
+
 const PinModalContext = createContext<PinModalActions | null>(null);
 
 function allKeys(tracks: Track[]): string[] {
@@ -71,7 +74,7 @@ function allYears(tracks: Track[]): number[] {
     return [...years].sort((a, b) => a - b);
 }
 
-function bpmNum(bpm: string[]): number | null {
+function parseBpm(bpm: string[]): number | null {
     const value = parseInt(bpm[0], 10);
     return Number.isFinite(value) ? value : null;
 }
@@ -96,8 +99,8 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
         window.addEventListener('mousemove', move);
         window.addEventListener('mouseup', up);
     };
-    const pctL = ((lo - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
-    const pctH = ((hi - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
+    const percentLow = ((lo - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
+    const percentHigh = ((hi - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
     const isDefault = lo === BPM_MIN && hi === BPM_MAX;
 
     return (
@@ -112,8 +115,8 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
             </div>
             <div className="relative flex items-center h-11">
                 <div className="relative w-full h-1.5 rounded-sm bg-zinc-900" ref={trackRef}>
-                    <div className="absolute top-0 bottom-0 rounded-sm bg-[var(--color-orange-80)]" style={{ left: `${pctL}%`, right: `${100 - pctH}%` }} />
-                    {([['lo', pctL], ['hi', pctH]] as const).map(([k, p]) => (
+                    <div className="absolute top-0 bottom-0 rounded-sm bg-[var(--color-orange-80)]" style={{ left: `${percentLow}%`, right: `${100 - percentHigh}%` }} />
+                    {([['lo', percentLow], ['hi', percentHigh]] as const).map(([k, p]) => (
                         <div
                             className="absolute top-1/2 w-4 h-4 rounded-full border-2 border-[var(--color-orange-80)] bg-white cursor-ew-resize"
                             aria-label={`BPM ${k === 'lo' ? 'minimum' : 'maximum'}`}
@@ -152,15 +155,16 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
         if (!sectionRef.current) return;
 
         gsap.from(sectionRef.current, {
-            duration: 0.5,
+            duration: ENTRANCE_DURATION,
             ease: 'power3.out',
             opacity: 0,
             scrollTrigger: { start: 'top 60%', trigger: sectionRef.current },
-            y: 30,
+            y: ENTRANCE_Y,
         });
     }, []);
 
     const setPage = (p: number) => {
+        if (p === list.page) return;
         list.setPage(p);
         sectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -172,30 +176,31 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
                     <h2 className="catalog__heading m-0 font-medium font-inter text-4xl tracking-[-0.025em]">
                         Catalog
                     </h2>
-                    <span className="text-xl tracking-[0.02em] [font-family:var(--font-mono)] text-zinc-400">
+                    <span className="font-mono text-xl tracking-[0.02em] text-zinc-400">
                         {list.total}
                         {' of '}
                         {tracks.length}
                     </span>
                 </div>
                 <Filters list={list} tracks={tracks} />
-                <div className="catalog__row grid items-center gap-5 px-5 py-3.5 mt-6 border border-zinc-800 text-[0.6875rem] tracking-[0.22em] bg-zinc-900 text-zinc-400">
-                    <span />
-                    <SortHeader field="id" label="ID" list={list} />
-                    <SortHeader field="title" label="TITLE" list={list} />
-                    <SortHeader field="year" label="YEAR" list={list} />
-                    <SortHeader align="right" field="duration" label="LENGTH" list={list} />
-                    <span className="pl-4 text-left">DOWNLOAD</span>
-                </div>
-                <div className="border border-zinc-800 border-t-0">
-                    {list.visible.length === 0 && (
-                        <div className="p-20 text-center text-sm text-zinc-400">
-                            No tracks match the current filters.
-                        </div>
-                    )}
-                    {list.visible.length > 0 && list.visible.map((t, i) => (
-                        <CatalogRow key={t.id} idx={i} isPlaying={player.trackId === t.id} pin={pin} t={t} />
-                    ))}
+                <div aria-label="Track catalog" role="grid">
+                    <div className="catalog__row grid items-center gap-5 px-5 py-3.5 mt-6 border border-zinc-800 text-[0.6875rem] tracking-[0.22em] bg-zinc-900 text-zinc-400" role="row">
+                        <span role="columnheader" />
+                        <SortHeader field="id" label="ID" list={list} />
+                        <SortHeader field="title" label="TITLE" list={list} />
+                        <SortHeader align="right" field="duration" label="LENGTH" list={list} />
+                        <span className="pl-4 text-left" role="columnheader">DOWNLOAD</span>
+                    </div>
+                    <div className="catalog__body border border-zinc-800 border-t-0" role="rowgroup">
+                        {list.visible.length === 0 && (
+                            <div className="p-20 text-center text-sm text-zinc-400">
+                                No tracks match the current filters.
+                            </div>
+                        )}
+                        {list.visible.length > 0 && list.visible.map((t, i) => (
+                            <CatalogRow key={t.id} idx={i} isActive={player.trackId === t.id} isPlaying={player.trackId === t.id && player.playing} pin={pin} t={t} />
+                        ))}
+                    </div>
                 </div>
                 <Pagination list={list} setPage={setPage} />
             </div>
@@ -203,18 +208,11 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
     );
 }
 
-function DLChip({ active, children, disabled, kind }: {
-    active: boolean; children: React.ReactNode; disabled?: boolean; kind: string;
+function DownloadChip({ children, kind }: {
+    children: React.ReactNode; kind: string;
 }) {
     return (
-        <div
-            className="px-3 py-2.5 rounded-none text-[0.6875rem]"
-            style={{
-                background: active ? 'var(--color-white-20)' : 'var(--color-transparent)',
-                border: `1px solid ${active ? 'var(--color-orange-80)' : 'var(--color-white-20)'}`,
-                opacity: disabled ? 0.4 : 1,
-            }}
-        >
+        <div className="px-3 py-2.5 rounded-sm border border-zinc-700 text-[0.6875rem]">
             <div className="mb-1 tracking-[0.18em] text-zinc-400">
                 {kind === 'master' ? 'MASTER' : 'MIXDOWN'}
             </div>
@@ -225,18 +223,18 @@ function DLChip({ active, children, disabled, kind }: {
     );
 }
 
-function FavChip({ active, color, icon, label, onClick }: {
+function FavoriteChip({ active, color, icon, label, onClick }: {
     active: boolean; color: string; icon: React.ReactNode; label: string; onClick: () => void;
 }) {
     return (
         <button
-            className="catalog__fav-btn flex items-center justify-center w-11 h-11 rounded-sm transition-all duration-150 cursor-pointer"
+            className={`catalog__favorite flex items-center justify-center w-11 h-11 rounded-sm border transition-[background,border-color,color] duration-150 cursor-pointer ${active ? '' : 'border-[var(--color-white-20)]'}`}
             aria-label={label}
             aria-pressed={active}
             onClick={onClick}
             style={{
                 background: active ? color : 'var(--color-transparent)',
-                border: `1px solid ${active ? color : 'var(--color-white-20)'}`,
+                borderColor: active ? color : undefined,
                 color: active ? 'var(--color-black)' : color,
             }}
         >
@@ -249,19 +247,26 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
     return (
         <div className="flex flex-col gap-5 p-7 rounded-sm border border-zinc-800 bg-zinc-800">
             <div className="flex items-center gap-3.5">
-                <div className="flex flex-1 items-center gap-3 px-4 py-3 rounded-sm bg-zinc-900 outline-2 outline-transparent outline-offset-2 focus-within:outline-[var(--color-orange-80)]">
+                <div className="flex flex-1 items-center gap-3 px-4 py-3 rounded-sm border border-transparent bg-zinc-900 transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus-within:border-[var(--color-orange-80)]">
                     <SearchIcon />
                     <input
-                        className="catalog__search-input flex-1 border-none text-sm [font-family:inherit] bg-transparent text-zinc-100 outline-none"
+                        className="catalog__search flex-1 border-none text-sm [font-family:inherit] bg-transparent text-zinc-100 outline-none"
                         aria-label="Search by title or ID"
+                        maxLength={100}
                         onChange={e => list.setQuery(e.target.value)}
-                        placeholder="search by title or id"
+                        onKeyDown={(e) => {
+                            if (e.key === 'Escape') {
+                                e.stopPropagation();
+                                list.setQuery('');
+                            }
+                        }}
+                        placeholder="Search by ID or title"
                         type="text"
                         value={list.query}
                     />
                     {list.query && (
                         <button
-                            className="border-none text-[0.8125rem] [font-family:inherit] bg-none text-zinc-400 hover:text-zinc-100 cursor-pointer"
+                            className="border-none text-[0.8125rem] [font-family:inherit] bg-none text-zinc-400 hover:opacity-80 active:opacity-70 cursor-pointer"
                             aria-label="Clear search"
                             onClick={() => list.setQuery('')}
                         >
@@ -270,20 +275,22 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     )}
                 </div>
                 <div className="flex rounded-sm bg-zinc-900">
-                    {(['music', 'sessions', 'productions'] as const).map(c => (
-                        <button
-                            className={`catalog__category-btn ${list.cats[c] ? 'catalog__category-btn--active' : 'text-zinc-400 hover:text-zinc-100'} px-[1.125rem] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-all duration-150 cursor-pointer`}
-                            aria-pressed={list.cats[c]}
-                            key={c}
-                            onClick={() => list.setCats({ ...list.cats, [c]: !list.cats[c] })}
-                        >
-                            {categoryLabel(c).toUpperCase()}
-                        </button>
+                    {(['music', 'sessions', 'productions'] as const).map((c, i) => (
+                        <Fragment key={c}>
+                            {i > 0 && <div className="w-px my-2 bg-zinc-700" />}
+                            <button
+                                className={`catalog__category ${list.cats[c] ? 'catalog__category--active' : 'text-zinc-400'} px-[1.125rem] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-[background,color,opacity] duration-150 cursor-pointer`}
+                                aria-pressed={list.cats[c]}
+                                onClick={() => list.setCats({ ...list.cats, [c]: !list.cats[c] })}
+                            >
+                                {categoryLabel(c).toUpperCase()}
+                            </button>
+                        </Fragment>
                     ))}
                 </div>
                 <div className="flex gap-2">
-                    <FavChip active={list.favs.star} color="var(--color-gold)" icon={<StarIcon />} label="Starred only" onClick={() => list.setFavs({ ...list.favs, star: !list.favs.star })} />
-                    <FavChip active={list.favs.heart} color="var(--color-rose)" icon={<HeartIcon />} label="Hearted only" onClick={() => list.setFavs({ ...list.favs, heart: !list.favs.heart })} />
+                    <FavoriteChip active={list.favs.star} color="var(--color-gold)" icon={<StarIcon />} label="Starred only" onClick={() => list.setFavs({ ...list.favs, star: !list.favs.star })} />
+                    <FavoriteChip active={list.favs.heart} color="var(--color-rose)" icon={<HeartIcon />} label="Hearted only" onClick={() => list.setFavs({ ...list.favs, heart: !list.favs.heart })} />
                 </div>
             </div>
             <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-[1.125rem]">
@@ -321,14 +328,14 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
     let summary: string;
 
     if (selected.length === 0) summary = placeholder;
-    else if (selected.length <= 2) summary = selected.map(v => options.find(([k]) => k === v)?.[1] || String(v)).join(', ');
+    else if (selected.length <= 5) summary = selected.map(v => options.find(([k]) => k === v)?.[1] || String(v)).join(', ');
     else summary = `${selected.length} selected`;
 
     return (
         <div className="relative flex flex-col gap-2" ref={ref}>
             <span className="text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</span>
             <button
-                className={`flex items-center justify-between px-3.5 py-[11px] rounded-sm border text-sm text-left [font-family:inherit] bg-zinc-900 transition-[border-color] duration-150 cursor-pointer ${open ? 'border-zinc-500' : 'border-transparent hover:border-zinc-700'}`}
+                className={`flex items-center justify-between px-3.5 py-[11px] rounded-sm border text-sm text-left [font-family:inherit] bg-zinc-900 transition-[border-color] duration-150 focus-visible:outline-none active:opacity-70 cursor-pointer ${open ? 'border-[var(--color-orange-80)]' : 'border-transparent hover:border-[var(--color-orange-80)]'}`}
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={`${label} filter`}
@@ -336,22 +343,7 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
                 style={{ color: selected.length ? 'var(--color-white)' : 'var(--color-white-40)' }}
             >
                 <span className="truncate">{summary}</span>
-                <span className="flex items-center gap-2">
-                    {selected.length > 0 && (
-                        <button
-                            className="border-none px-1 text-xs [font-family:inherit] bg-none text-zinc-400 hover:text-zinc-100 cursor-pointer"
-                            aria-label="Clear selection"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onChange([]);
-                            }}
-                            type="button"
-                        >
-                            ✕
-                        </button>
-                    )}
-                    <ChevronIcon open={open} />
-                </span>
+                <ChevronIcon open={open} />
             </button>
             {open && <MultiSelectPopover options={options} selected={selected} onChange={onChange} />}
         </div>
@@ -363,9 +355,6 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
 }) {
     const [search, setSearch] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
-    useEffect(() => {
-        searchRef.current?.focus();
-    }, []);
     const filtered = options.filter(([, l]) => !search || l.toLowerCase().includes(search.toLowerCase()));
     const toggle = (v: T) => {
         if (selected.includes(v)) onChange(selected.filter(s => s !== v));
@@ -373,7 +362,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
     };
 
     return (
-        <div className="catalog__dropdown absolute top-[calc(100%+4px)] left-0 right-0 flex flex-col z-50 max-h-80 rounded-sm border border-zinc-700 bg-zinc-800" role="listbox">
+        <div className="catalog__dropdown absolute top-[calc(100%+4px)] left-0 right-0 flex flex-col z-50 rounded-sm border border-zinc-700 bg-zinc-800">
             <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-700">
                 <span className="flex-1 text-[0.625rem] tracking-[0.22em] text-zinc-400">
                     {selected.length}
@@ -381,7 +370,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                     selected
                 </span>
                 <button
-                    className="border-none text-[0.6875rem] tracking-[0.16em] [font-family:inherit] bg-transparent hover:opacity-80 cursor-pointer"
+                    className="border-none text-[0.6875rem] tracking-[0.16em] [font-family:inherit] bg-transparent hover:opacity-80 active:opacity-70 cursor-pointer"
                     disabled={!selected.length}
                     onClick={() => onChange([])}
                     style={{ color: selected.length ? 'var(--color-orange-80)' : 'var(--color-white-40)' }}
@@ -390,58 +379,64 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                 </button>
             </div>
             <input
-                className="px-3.5 py-2.5 border-0 border-b border-b-zinc-700 text-[0.8125rem] [font-family:inherit] bg-zinc-900 text-zinc-100 outline-none"
+                className="catalog__dropdown-input px-4 py-3 rounded-sm border border-zinc-700 text-[0.8125rem] [font-family:inherit] bg-zinc-900 text-zinc-100 outline-none focus-visible:outline-none transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus:border-[var(--color-orange-80)]"
+                maxLength={20}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="filter"
+                placeholder="Filter"
                 ref={searchRef}
                 type="text"
                 value={search}
             />
-            <div className="max-h-[220px] p-1 overflow-y-auto">
+            <ul className="max-h-[400px] p-1.5 overflow-y-auto list-none m-0" role="listbox">
                 {filtered.length === 0 && (
-                    <div className="p-4 text-center text-zinc-400 text-xs">No matches</div>
+                    <li className="p-4 text-center text-zinc-400 text-xs">No matches.</li>
                 )}
                 {filtered.length > 0 && filtered.map(([v, l]) => {
                     const isSelected = selected.includes(v);
 
                     return (
-                        <label
-                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[0.8125rem] cursor-pointer"
+                        <li
+                            aria-selected={isSelected}
                             key={String(v)}
-                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
-                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
-                            style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
+                            role="option"
                         >
-                            <span
-                                className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-[0.625rem] text-white"
-                                style={{
-                                    background: isSelected ? 'var(--color-orange-80)' : 'var(--color-transparent)',
-                                    border: `1px solid ${isSelected ? 'var(--color-orange-80)' : 'var(--color-zinc-500)'}`,
-                                }}
+                            <label
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-[0.8125rem] cursor-pointer"
+                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
+                                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
+                                style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
                             >
-                                {isSelected ? '✓' : ''}
-                            </span>
-                            <input
-                                className="hidden"
-                                checked={isSelected}
-                                onChange={() => toggle(v)}
-                                type="checkbox"
-                            />
-                            <span>{l}</span>
-                        </label>
+                                <span
+                                    className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-[0.625rem] text-white"
+                                    style={{
+                                        background: isSelected ? 'var(--color-orange-80)' : 'var(--color-transparent)',
+                                        border: `1px solid ${isSelected ? 'var(--color-orange-80)' : 'var(--color-zinc-500)'}`,
+                                    }}
+                                >
+                                    {isSelected ? '✓' : ''}
+                                </span>
+                                <input
+                                    className="hidden"
+                                    checked={isSelected}
+                                    onChange={() => toggle(v)}
+                                    type="checkbox"
+                                />
+                                <span>{l}</span>
+                            </label>
+                        </li>
                     );
                 })}
-            </div>
+            </ul>
         </div>
     );
 }
 
-function PageBtn({ children, active, disabled, onClick }: {
+function PageButton({ children, active, disabled, onClick }: {
     active?: boolean; children: React.ReactNode; disabled?: boolean; onClick: () => void;
 }) {
     return (
         <button
-            className={`catalog__page-btn ${active ? 'catalog__page-btn--active' : ''} min-w-9 px-[13px] py-2 rounded-sm border border-zinc-700 font-medium text-xs [font-family:inherit] bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} transition-all duration-150 cursor-pointer`}
+            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-[13px] py-2 rounded-sm border border-zinc-700 font-medium text-xs [font-family:inherit] bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} transition-[background,border-color,color,opacity] duration-150 ${!active && !disabled ? 'cursor-pointer' : ''}`}
             disabled={disabled}
             onClick={onClick}
         >
@@ -454,7 +449,7 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
     const showPages: (number | '…')[] = [];
     const total = list.pageCount;
     for (let i = 0; i < total; i++) {
-        if (i === 0 || i === total - 1 || Math.abs(i - list.page) <= 2) showPages.push(i);
+        if (i === 0 || i === total - 1 || Math.abs(i - list.page) <= PAGE_ADJACENT) showPages.push(i);
         else if (showPages[showPages.length - 1] !== '…') showPages.push('…');
     }
 
@@ -466,12 +461,12 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
                 {list.total}
             </span>
             <div className="flex gap-1">
-                <PageBtn disabled={list.page === 0} onClick={() => setPage(Math.max(0, list.page - 1))}>‹</PageBtn>
+                <PageButton disabled={list.page === 0} onClick={() => setPage(Math.max(0, list.page - 1))}><span className="text-base leading-none">‹</span></PageButton>
                 {showPages.map((p, i) => {
                     if (p === '…') return <span className="px-2.5 py-2 text-zinc-500" key={`e${i}`}>…</span>;
-                    return <PageBtn key={p} active={p === list.page} onClick={() => setPage(p)}>{p + 1}</PageBtn>;
+                    return <PageButton key={p} active={p === list.page} onClick={() => setPage(p)}>{p + 1}</PageButton>;
                 })}
-                <PageBtn disabled={list.page === list.pageCount - 1} onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}>›</PageBtn>
+                <PageButton disabled={list.page === list.pageCount - 1} onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}><span className="text-base leading-none">›</span></PageButton>
             </div>
         </div>
     );
@@ -488,6 +483,7 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
 }) {
     const formRef = useRef<HTMLFormElement>(null);
     const pinInputId = useId();
+    const titleId = useId();
     const slug = buildSlug(target.track.id, target.track.title);
 
     useEffect(() => {
@@ -517,7 +513,8 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
 
     return (
         <div
-            className="pin-modal__overlay fixed inset-0 flex items-center justify-center z-[1000]"
+            className="modal__overlay fixed inset-0 flex items-center justify-center z-[1000]"
+            aria-labelledby={titleId}
             aria-modal="true"
             role="dialog"
         >
@@ -529,34 +526,20 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                 type="button"
             />
             <form
-                className={`pin-modal ${state === 'error' ? 'pin-modal--shake' : ''} relative w-[460px] max-w-[90vw] px-8 py-7 text-zinc-100`}
+                className={`modal ${state === 'error' ? 'modal--shake' : ''} relative w-[460px] max-w-[90vw] px-8 py-7 text-zinc-100`}
                 onSubmit={submit}
                 ref={formRef}
             >
-                <div className="flex justify-between mb-5 text-[0.6875rem] tracking-[0.18em] text-zinc-400">
-                    <span>AUTHORIZATION</span>
-                    <button
-                        className="border-none text-[0.6875rem] [font-family:inherit] bg-none text-zinc-400 hover:text-zinc-100 cursor-pointer"
-                        onClick={close}
-                        type="button"
-                    >
-                        ESC
-                    </button>
-                </div>
-                <div className="mb-1 font-medium text-[1.375rem] tracking-[-0.01em]">
+                <div id={titleId} className="mb-1 font-medium text-[1.375rem] tracking-[-0.01em]">
                     {target.track.title || '(untitled)'}
                 </div>
-                <div className="mb-6 text-xs text-zinc-400">
-                    {`${target.track.id} · ${fmtDuration(target.track.duration)} · ${target.track.bpm.join('/')} BPM · ${target.track.key.join(', ')}`}
+                <div className="mb-6 text-[0.6875rem] tracking-[0.2em] text-zinc-400">
+                    {`${categoryLabel(target.track.category).toUpperCase()} · ${target.track.id} · ${target.track.year} · BPM ${target.track.bpm.join(' ')} · ${target.track.key.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}`}
                 </div>
-                <div className="grid grid-cols-2 gap-2 mb-5">
-                    <DLChip active={target.kind === 'master'} kind="master">
-                        {slug}
-                        .wav
-                    </DLChip>
-                    <DLChip active={target.kind === 'mixdown'} disabled={!target.track.mixdown} kind="mixdown">
-                        {target.track.mixdown ? `${slug}_mixdown.wav` : 'no mixdown'}
-                    </DLChip>
+                <div className="mb-5">
+                    <DownloadChip kind={target.kind}>
+                        {target.kind === 'master' ? `${slug}.wav` : `${slug}_mixdown.wav`}
+                    </DownloadChip>
                 </div>
                 <label
                     className="block mb-2 text-[0.6875rem] tracking-[0.18em] text-zinc-400"
@@ -566,40 +549,39 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                 </label>
                 <input
                     id={pinInputId}
-                    className={`pin-modal__input ${state === 'error' ? 'pin-modal__input--error' : ''} w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150`}
+                    className={`modal__input ${state === 'error' ? 'modal__input--error' : ''} w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150`}
                     autoComplete="off"
                     maxLength={6}
                     onChange={e => setPin(e.target.value)}
-                    placeholder="• • • •"
+                    placeholder=""
                     ref={inputRef}
                     type="password"
                     value={pin}
                 />
                 <div className="min-h-[18px] mt-2 text-[0.6875rem]" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
-                    {state === 'error' && 'Invalid pin'}
+                    {state === 'error' && 'Invalid pin.'}
                     {state === 'success' && '✓ Verified — generating signed url'}
                     {state === 'idle' && ' '}
                     {state === 'checking' && 'Verifying…'}
                 </div>
                 <div className="flex gap-2 mt-5">
                     <button
-                        className="flex-1 px-4 py-3 border border-zinc-700 text-xs tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 transition-all duration-150 hover:bg-[var(--color-white-20)] hover:border-[var(--color-orange-80)] hover:text-[var(--color-orange-80)] cursor-pointer"
-                        onClick={close}
-                        type="button"
-                    >
-                        CANCEL
-                    </button>
-                    <button
-                        className="flex-[2] px-4 py-3 border-none font-medium text-xs tracking-[0.18em] [font-family:inherit] text-white transition-[background,opacity] duration-150 hover:opacity-90"
+                        className={`flex-[2] px-4 py-3 border-none font-medium text-xs tracking-[0.18em] [font-family:inherit] text-white transition-[background,opacity] duration-150 hover:opacity-90 active:opacity-70 ${state === 'checking' ? 'opacity-60' : ''}`}
                         disabled={state === 'checking' || state === 'success'}
                         style={{
                             background: state === 'success' ? 'var(--color-sage-40)' : 'var(--color-orange-80)',
                             cursor: state === 'checking' ? 'wait' : 'pointer',
-                            opacity: state === 'checking' ? 0.6 : 1,
                         }}
                         type="submit"
                     >
                         {state === 'success' ? '✓ DOWNLOAD READY' : state === 'checking' ? 'VERIFYING…' : 'DOWNLOAD'}
+                    </button>
+                    <button
+                        className="flex-1 px-4 py-3 border border-zinc-700 text-xs tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 hover:bg-[var(--color-white-20)] hover:border-[var(--color-orange-80)] hover:text-[var(--color-orange-80)] active:opacity-70 cursor-pointer"
+                        onClick={close}
+                        type="button"
+                    >
+                        CANCEL
                     </button>
                 </div>
             </form>
@@ -646,7 +628,7 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         e?.preventDefault();
         setState('checking');
         setTimeout(() => {
-            if (/^\d{4}$/.test(pin)) {
+            if (/^\d{6}$/.test(pin)) {
                 setState('success');
                 setTimeout(() => close(), PIN_SUCCESS_DELAY);
             } else {
@@ -679,7 +661,7 @@ function SortHeader({ align, field, label, list }: { align?: 'right'; field: str
     return (
         <span className={align === 'right' ? 'text-right' : ''} aria-sort={active ? (list.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} role="columnheader">
             <button
-                className={`catalog__sort-btn inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer select-none ${active ? 'text-[var(--color-orange-80)]' : 'text-zinc-400'}`}
+                className={`catalog__sort ${active ? 'catalog__sort--active' : ''} inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer ${active ? '' : 'text-zinc-400'}`}
                 onClick={() => {
                     if (list.sort.field !== field) list.setSort({ dir: 'asc', field });
                     else if (list.sort.dir === 'asc') list.setSort({ dir: 'desc', field });
@@ -688,7 +670,7 @@ function SortHeader({ align, field, label, list }: { align?: 'right'; field: str
             >
                 {label}
                 {active && (
-                    <span className="text-[0.5rem] transition-transform duration-150" style={{ transform: list.sort.dir === 'desc' ? 'rotate(180deg)' : 'none' }}>▲</span>
+                    <span className="text-[0.6rem] leading-none">{list.sort.dir === 'asc' ? '▲' : '▼'}</span>
                 )}
             </button>
         </span>
@@ -737,7 +719,7 @@ function useTrackList(tracks: Track[]) {
         }
 
         results = results.filter((t) => {
-            const value = bpmNum(t.bpm);
+            const value = parseBpm(t.bpm);
 
             if (value === null) {
                 return bpmRange[0] === BPM_MIN && bpmRange[1] === BPM_MAX;
@@ -762,8 +744,8 @@ function useTrackList(tracks: Track[]) {
                 valA = a.duration;
                 valB = b.duration;
             } else if (sort.field === 'bpm') {
-                valA = bpmNum(a.bpm) ?? 9999;
-                valB = bpmNum(b.bpm) ?? 9999;
+                valA = parseBpm(a.bpm) ?? SORT_FALLBACK;
+                valB = parseBpm(b.bpm) ?? SORT_FALLBACK;
             } else if (sort.field === 'key') {
                 valA = (a.key[0]) || '~~~';
                 valB = (b.key[0]) || '~~~';
@@ -772,7 +754,9 @@ function useTrackList(tracks: Track[]) {
                 valB = b.id;
             }
 
-            return valA < valB ? -direction : valA > valB ? direction : 0;
+            if (valA < valB) return -direction;
+            if (valA > valB) return direction;
+            return 0;
         });
 
         return results;
@@ -785,20 +769,30 @@ function useTrackList(tracks: Track[]) {
 
     return {
         PAGE_SIZE,
-        bpmRange, setBpmRange,
-        cats, setCats,
-        favs, setFavs,
+        bpmRange,
+        cats,
+        favs,
         filtered,
-        keys, setKeys,
-        page, setPage,
+        keys,
+        page,
         pageCount,
-        query, setQuery,
-        sort, setSort,
+        query,
+        setBpmRange,
+        setCats,
+        setFavs,
+        setKeys,
+        setPage,
+        setQuery,
+        setSort,
+        setYears,
+        sort,
         total: filtered.length,
         visible,
-        years, setYears,
+        years,
     };
 }
+
+gsap.registerPlugin(ScrollTrigger);
 
 export default function Catalog({ tracks }: { tracks: Track[] }) {
     return (

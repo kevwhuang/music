@@ -2,14 +2,14 @@
 const links = [
     { href: 'https://instagram.com/aephonics', label: 'INSTAGRAM', value: '@aephonics' },
     { href: 'mailto:kevin@aephonics.com', label: 'EMAIL', value: 'kevin@aephonics.com' },
-    { href: 'https://austinproduceralliance.com', label: 'ORGANIZATION', value: 'austinproduceralliance.com' },
+    { href: 'https://austinproduceralliance.com', label: 'COLLECTIVE', value: 'austinproduceralliance.com' },
 ];
 ---
 
 <footer class="px-10 py-24 border-t border-white-20 bg-zinc-950">
     <div class="flex items-start justify-between max-w-[80rem] gap-6 mx-auto">
         <div>
-            <a class="footer__brand mb-1.5 font-medium font-inter text-base tracking-[-0.01em] no-underline text-zinc-100" href="https://aephonics.com">aephonics</a>
+            <a class="footer__brand mb-1.5 font-medium font-inter text-base tracking-[-0.01em] no-underline text-zinc-100 transition-[color,text-shadow,opacity] duration-150" href="https://aephonics.com">aephonics</a>
             <div class="text-[0.8125rem] text-zinc-400">&copy; 2026. All rights reserved.</div>
         </div>
         <div class="flex gap-9 text-xs tracking-[0.14em]">
@@ -17,7 +17,7 @@ const links = [
                 <div class="flex flex-col gap-1.5 font-mono">
                     <span class="text-[0.625rem] tracking-[0.22em] text-zinc-500">{label}</span>
                     <a
-                        class="footer__link text-[0.8125rem] no-underline text-zinc-100"
+                        class="footer__link text-[0.8125rem] no-underline text-zinc-100 transition-[color,text-shadow,opacity] duration-150"
                         href={href}
                         rel="noopener noreferrer"
                         target="_blank"

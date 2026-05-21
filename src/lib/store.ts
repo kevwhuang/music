@@ -42,8 +42,7 @@ function createPlayerStore() {
                     volume: saved.volume ?? INITIAL.volume,
                 };
             }
-        } catch (e) {
-            console.warn('Failed to restore player state', e);
+        } catch {
             return { ...INITIAL };
         }
 
@@ -65,38 +64,41 @@ function createPlayerStore() {
             if (!audio) {
                 audio = new Audio();
                 audio.volume = store.state.volume;
+                const element = audio;
 
                 const tick = () => {
-                    store.state = { ...store.state, position: audio!.currentTime };
+                    store.state = { ...store.state, position: element.currentTime };
                     store.emit();
                     raf = requestAnimationFrame(tick);
                 };
 
-                audio.addEventListener('loadedmetadata', () => {
-                    store.state = { ...store.state, duration: audio!.duration };
+                element.addEventListener('loadedmetadata', () => {
+                    store.state = { ...store.state, duration: element.duration };
                     store.emit();
                 });
 
-                audio.addEventListener('ended', () => {
+                element.addEventListener('ended', () => {
                     if (store.state.repeat) {
-                        audio!.currentTime = 0;
-                        audio!.play().catch(() => {});
+                        element.currentTime = 0;
+                        element.play().catch(() => {});
                     } else {
-                        store.set({ playing: false, position: audio!.duration || store.state.duration });
+                        store.set({ playing: false, position: element.duration || store.state.duration });
                     }
                 });
 
-                audio.addEventListener('pause', () => {
+                element.addEventListener('pause', () => {
                     if (raf) {
                         cancelAnimationFrame(raf);
                         raf = null;
                     }
 
+                    if (element.ended && store.state.repeat) return;
+
                     store.state = { ...store.state, playing: false };
                     store.emit();
                 });
 
-                audio.addEventListener('play', () => {
+                element.addEventListener('play', () => {
                     store.state = { ...store.state, playing: true };
                     store.emit();
 
@@ -147,8 +149,8 @@ function createPlayerStore() {
                     repeat: store.state.repeat,
                     volume: store.state.volume,
                 }));
-            } catch (e) {
-                console.warn('Failed to save player state', e);
+            } catch {
+                return;
             }
         },
 

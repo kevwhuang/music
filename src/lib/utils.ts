@@ -10,7 +10,7 @@ export function categoryLabel(category: string): string {
     return { music: 'Music', productions: 'Productions', sessions: 'Sessions' }[category] ?? category;
 }
 
-export function fmtDuration(seconds: number | undefined | null): string {
+export function formatDuration(seconds: number | undefined | null): string {
     if (seconds === null || seconds === undefined) return '—';
 
     const minutes = Math.floor(seconds / 60);

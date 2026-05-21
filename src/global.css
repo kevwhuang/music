@@ -65,3 +65,13 @@ body {
         transition-duration: 0.01ms !important;
     }
 }
+
+@keyframes body__fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

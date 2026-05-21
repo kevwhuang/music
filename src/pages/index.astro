@@ -9,7 +9,7 @@ import Player from '@sections/Player';
 const entries = await getCollection('tracks');
 const tracks = entries
     .map(entry => ({ ...entry.data, id: entry.id }))
-    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    .sort((a, b) => a.id.localeCompare(b.id));
 ---
 
 <Layout

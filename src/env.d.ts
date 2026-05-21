@@ -12,6 +12,7 @@ interface Track {
     key: string[];
     master: boolean;
     mixdown: boolean;
+    peaks: number[];
     slug: string;
     star: boolean;
     title: string;

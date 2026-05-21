@@ -1,7 +1,7 @@
 import { defineCollection } from 'astro:content';
-import { z } from 'astro/zod';
 import fs from 'node:fs';
 import path from 'node:path';
+import { z } from 'astro/zod';
 
 import { buildSlug } from '@lib/utils';
 

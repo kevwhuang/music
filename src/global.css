@@ -47,6 +47,10 @@
     outline-offset: 2px;
 }
 
+body {
+    animation: body__fade-in 0.5s ease forwards;
+}
+
 [data-scroll] {
     opacity: 0;
 }

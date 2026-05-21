@@ -1,13 +1,17 @@
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import gsap from 'gsap';
 
-import { buildSlug, categoryLabel, fmtDuration } from '@lib/utils';
-import { usePlayer } from '@lib/store';
 import { CatalogRow } from '@components/CatalogRow';
 import { ChevronIcon } from '@components/ChevronIcon';
 import { ErrorBoundary } from '@components/ErrorBoundary';
 import { HeartIcon } from '@components/HeartIcon';
 import { SearchIcon } from '@components/SearchIcon';
 import { StarIcon } from '@components/StarIcon';
+import { buildSlug, categoryLabel, fmtDuration } from '@lib/utils';
+import { usePlayer } from '@lib/store';
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface CategoryFilters {
     music: boolean;
@@ -30,17 +34,19 @@ interface PinModalTarget {
     track: Track;
 }
 
+type TrackListState = ReturnType<typeof useTrackList>;
+
 interface SortConfig {
     dir: 'asc' | 'desc';
     field: string;
 }
 
-type TrackListState = ReturnType<typeof useTrackList>;
-
 const BPM_MAX = 180;
 const BPM_MIN = 50;
-
+const FOCUS_DELAY = 50;
 const PAGE_SIZE = 50;
+const PIN_SUCCESS_DELAY = 1400;
+const PIN_VERIFY_DELAY = 600;
 const PinModalContext = createContext<PinModalActions | null>(null);
 
 function allKeys(tracks: Track[]): string[] {
@@ -109,15 +115,12 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
                     <div className="absolute top-0 bottom-0 rounded-sm bg-[var(--color-orange-80)]" style={{ left: `${pctL}%`, right: `${100 - pctH}%` }} />
                     {([['lo', pctL], ['hi', pctH]] as const).map(([k, p]) => (
                         <div
-                            key={k}
                             className="absolute top-1/2 w-4 h-4 rounded-full border-2 border-[var(--color-orange-80)] bg-white cursor-ew-resize"
                             aria-label={`BPM ${k === 'lo' ? 'minimum' : 'maximum'}`}
                             aria-valuemax={BPM_MAX}
                             aria-valuemin={BPM_MIN}
                             aria-valuenow={k === 'lo' ? lo : hi}
-                            role="slider"
-                            style={{ boxShadow: '0 2px 4px var(--color-black-40)', left: `${p}%`, transform: 'translate(-50%, -50%)' }}
-                            tabIndex={0}
+                            key={k}
                             onKeyDown={(e) => {
                                 if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
                                     if (k === 'lo') onChange([Math.max(BPM_MIN, lo - 1), hi]);
@@ -128,6 +131,9 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
                                 }
                             }}
                             onMouseDown={onDrag(k)}
+                            role="slider"
+                            style={{ boxShadow: '0 2px 4px var(--color-black-40)', left: `${p}%`, transform: 'translate(-50%, -50%)' }}
+                            tabIndex={0}
                         />
                     ))}
                 </div>
@@ -142,15 +148,27 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
     const player = usePlayer();
     const sectionRef = useRef<HTMLElement>(null);
 
+    useEffect(() => {
+        if (!sectionRef.current) return;
+
+        gsap.from(sectionRef.current, {
+            duration: 0.5,
+            ease: 'power3.out',
+            opacity: 0,
+            scrollTrigger: { start: 'top 60%', trigger: sectionRef.current },
+            y: 30,
+        });
+    }, []);
+
     const setPage = (p: number) => {
         list.setPage(p);
         sectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
-        <section ref={sectionRef} className="px-10 py-48 font-mono text-sm">
+        <section className="px-10 py-48 font-mono text-sm" ref={sectionRef}>
             <div className="max-w-[92.5rem] mx-auto">
-                <div className="flex items-baseline justify-between gap-6 mb-8">
+                <div className="flex items-baseline justify-between gap-6 px-5 mb-8">
                     <h2 className="catalog__heading m-0 font-medium font-inter text-4xl tracking-[-0.025em]">
                         Catalog
                     </h2>
@@ -161,24 +179,23 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
                     </span>
                 </div>
                 <Filters list={list} tracks={tracks} />
-                <div className="catalog__row grid items-center gap-3.5 px-5 py-3.5 mt-6 border border-zinc-800 text-[0.6875rem] tracking-[0.22em] bg-zinc-900 text-zinc-400">
+                <div className="catalog__row grid items-center gap-5 px-5 py-3.5 mt-6 border border-zinc-800 text-[0.6875rem] tracking-[0.22em] bg-zinc-900 text-zinc-400">
                     <span />
                     <SortHeader field="id" label="ID" list={list} />
                     <SortHeader field="title" label="TITLE" list={list} />
                     <SortHeader field="year" label="YEAR" list={list} />
-                    <SortHeader field="duration" label="LENGTH" list={list} />
-                    <span className="text-left">DOWNLOAD</span>
+                    <SortHeader align="right" field="duration" label="LENGTH" list={list} />
+                    <span className="pl-4 text-left">DOWNLOAD</span>
                 </div>
                 <div className="border border-zinc-800 border-t-0">
-                    {list.visible.length === 0
-                        ? (
-                                <div className="p-20 text-center text-sm text-zinc-400">
-                                    No tracks match the current filter chain.
-                                </div>
-                            )
-                        : list.visible.map((t, i) => (
-                                <CatalogRow key={t.id} idx={i} isPlaying={player.trackId === t.id} pin={pin} t={t} />
-                            ))}
+                    {list.visible.length === 0 && (
+                        <div className="p-20 text-center text-sm text-zinc-400">
+                            No tracks match the current filters.
+                        </div>
+                    )}
+                    {list.visible.length > 0 && list.visible.map((t, i) => (
+                        <CatalogRow key={t.id} idx={i} isPlaying={player.trackId === t.id} pin={pin} t={t} />
+                    ))}
                 </div>
                 <Pagination list={list} setPage={setPage} />
             </div>
@@ -208,19 +225,20 @@ function DLChip({ active, children, disabled, kind }: {
     );
 }
 
-function FavChip({ active, color, icon, title, onClick }: {
-    active: boolean; color: string; icon: React.ReactNode; onClick: () => void; title: string;
+function FavChip({ active, color, icon, label, onClick }: {
+    active: boolean; color: string; icon: React.ReactNode; label: string; onClick: () => void;
 }) {
     return (
         <button
             className="catalog__fav-btn flex items-center justify-center w-11 h-11 rounded-sm transition-all duration-150 cursor-pointer"
+            aria-label={label}
+            aria-pressed={active}
+            onClick={onClick}
             style={{
                 background: active ? color : 'var(--color-transparent)',
                 border: `1px solid ${active ? color : 'var(--color-white-20)'}`,
                 color: active ? 'var(--color-black)' : color,
             }}
-            title={title}
-            onClick={onClick}
         >
             {icon}
         </button>
@@ -231,19 +249,20 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
     return (
         <div className="flex flex-col gap-5 p-7 rounded-sm border border-zinc-800 bg-zinc-800">
             <div className="flex items-center gap-3.5">
-                <div className="flex flex-1 items-center gap-3 px-4 py-3 rounded-sm bg-zinc-900">
+                <div className="flex flex-1 items-center gap-3 px-4 py-3 rounded-sm bg-zinc-900 outline-2 outline-transparent outline-offset-2 focus-within:outline-[var(--color-orange-80)]">
                     <SearchIcon />
                     <input
-                        className="flex-1 border-none text-sm [font-family:inherit] bg-transparent text-zinc-100 outline-none"
+                        className="catalog__search-input flex-1 border-none text-sm [font-family:inherit] bg-transparent text-zinc-100 outline-none"
+                        aria-label="Search by title or ID"
+                        onChange={e => list.setQuery(e.target.value)}
                         placeholder="search by title or id"
                         type="text"
                         value={list.query}
-                        onChange={e => list.setQuery(e.target.value)}
                     />
                     {list.query && (
                         <button
+                            className="border-none text-[0.8125rem] [font-family:inherit] bg-none text-zinc-400 hover:text-zinc-100 cursor-pointer"
                             aria-label="Clear search"
-                            className="border-none text-[0.8125rem] [font-family:inherit] bg-none text-zinc-400 cursor-pointer"
                             onClick={() => list.setQuery('')}
                         >
                             ✕
@@ -253,8 +272,9 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                 <div className="flex rounded-sm bg-zinc-900">
                     {(['music', 'sessions', 'productions'] as const).map(c => (
                         <button
+                            className={`catalog__category-btn ${list.cats[c] ? 'catalog__category-btn--active' : 'text-zinc-400 hover:text-zinc-100'} px-[1.125rem] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-all duration-150 cursor-pointer`}
+                            aria-pressed={list.cats[c]}
                             key={c}
-                            className={`catalog__category-btn px-[1.125rem] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-all duration-150 cursor-pointer ${list.cats[c] ? 'catalog__category-btn--active' : 'text-zinc-400'}`}
                             onClick={() => list.setCats({ ...list.cats, [c]: !list.cats[c] })}
                         >
                             {categoryLabel(c).toUpperCase()}
@@ -262,8 +282,8 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     ))}
                 </div>
                 <div className="flex gap-2">
-                    <FavChip active={list.favs.star} color="var(--color-gold)" icon={<StarIcon />} title="Starred only" onClick={() => list.setFavs({ ...list.favs, star: !list.favs.star })} />
-                    <FavChip active={list.favs.heart} color="var(--color-rose)" icon={<HeartIcon />} title="Hearted only" onClick={() => list.setFavs({ ...list.favs, heart: !list.favs.heart })} />
+                    <FavChip active={list.favs.star} color="var(--color-gold)" icon={<StarIcon />} label="Starred only" onClick={() => list.setFavs({ ...list.favs, star: !list.favs.star })} />
+                    <FavChip active={list.favs.heart} color="var(--color-rose)" icon={<HeartIcon />} label="Hearted only" onClick={() => list.setFavs({ ...list.favs, heart: !list.favs.heart })} />
                 </div>
             </div>
             <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-[1.125rem]">
@@ -298,31 +318,34 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
         };
     }, [open]);
 
-    const summary = selected.length === 0
-        ? placeholder
-        : selected.length <= 2
-            ? selected.map(v => options.find(([k]) => k === v)?.[1] || String(v)).join(', ')
-            : `${selected.length} selected`;
+    let summary: string;
+
+    if (selected.length === 0) summary = placeholder;
+    else if (selected.length <= 2) summary = selected.map(v => options.find(([k]) => k === v)?.[1] || String(v)).join(', ');
+    else summary = `${selected.length} selected`;
 
     return (
         <div className="relative flex flex-col gap-2" ref={ref}>
             <span className="text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</span>
             <button
-                className={`flex items-center justify-between px-3.5 py-[11px] rounded-sm border text-sm text-left [font-family:inherit] bg-zinc-900 transition-[border-color] duration-150 cursor-pointer ${open ? 'border-zinc-500' : 'border-transparent'}`}
-                style={{ color: selected.length ? 'var(--color-white)' : 'var(--color-white-40)' }}
+                className={`flex items-center justify-between px-3.5 py-[11px] rounded-sm border text-sm text-left [font-family:inherit] bg-zinc-900 transition-[border-color] duration-150 cursor-pointer ${open ? 'border-zinc-500' : 'border-transparent hover:border-zinc-700'}`}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-label={`${label} filter`}
                 onClick={() => setOpen(!open)}
+                style={{ color: selected.length ? 'var(--color-white)' : 'var(--color-white-40)' }}
             >
                 <span className="truncate">{summary}</span>
                 <span className="flex items-center gap-2">
                     {selected.length > 0 && (
                         <button
+                            className="border-none px-1 text-xs [font-family:inherit] bg-none text-zinc-400 hover:text-zinc-100 cursor-pointer"
                             aria-label="Clear selection"
-                            className="border-none px-1 text-xs [font-family:inherit] bg-none text-zinc-400 cursor-pointer"
-                            type="button"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onChange([]);
                             }}
+                            type="button"
                         >
                             ✕
                         </button>
@@ -350,7 +373,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
     };
 
     return (
-        <div className="catalog__dropdown absolute top-[calc(100%+4px)] left-0 right-0 z-50 flex flex-col max-h-80 rounded-sm border border-zinc-700 bg-zinc-800">
+        <div className="catalog__dropdown absolute top-[calc(100%+4px)] left-0 right-0 flex flex-col z-50 max-h-80 rounded-sm border border-zinc-700 bg-zinc-800" role="listbox">
             <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-700">
                 <span className="flex-1 text-[0.625rem] tracking-[0.22em] text-zinc-400">
                     {selected.length}
@@ -358,55 +381,56 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                     selected
                 </span>
                 <button
-                    className="border-none text-[0.6875rem] tracking-[0.16em] [font-family:inherit] bg-transparent cursor-pointer"
+                    className="border-none text-[0.6875rem] tracking-[0.16em] [font-family:inherit] bg-transparent hover:opacity-80 cursor-pointer"
                     disabled={!selected.length}
-                    style={{ color: selected.length ? 'var(--color-orange-80)' : 'var(--color-white-40)' }}
                     onClick={() => onChange([])}
+                    style={{ color: selected.length ? 'var(--color-orange-80)' : 'var(--color-white-40)' }}
                 >
                     CLEAR
                 </button>
             </div>
             <input
-                className="px-3.5 py-2.5 border-none border-b border-b-zinc-700 text-[0.8125rem] [font-family:inherit] bg-zinc-900 text-zinc-100 outline-none"
-                ref={searchRef}
+                className="px-3.5 py-2.5 border-0 border-b border-b-zinc-700 text-[0.8125rem] [font-family:inherit] bg-zinc-900 text-zinc-100 outline-none"
+                onChange={e => setSearch(e.target.value)}
                 placeholder="filter"
+                ref={searchRef}
                 type="text"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
             />
             <div className="max-h-[220px] p-1 overflow-y-auto">
-                {filtered.length === 0
-                    ? <div className="p-4 text-center text-zinc-400 text-xs">No matches</div>
-                    : filtered.map(([v, l]) => {
-                            const isSelected = selected.includes(v);
+                {filtered.length === 0 && (
+                    <div className="p-4 text-center text-zinc-400 text-xs">No matches</div>
+                )}
+                {filtered.length > 0 && filtered.map(([v, l]) => {
+                    const isSelected = selected.includes(v);
 
-                            return (
-                                <label
-                                    key={String(v)}
-                                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[0.8125rem] cursor-pointer"
-                                    style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
-                                    onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
-                                    onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
-                                >
-                                    <span
-                                        className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-[0.625rem] text-white"
-                                        style={{
-                                            background: isSelected ? 'var(--color-orange-80)' : 'var(--color-transparent)',
-                                            border: `1px solid ${isSelected ? 'var(--color-orange-80)' : 'var(--color-zinc-500)'}`,
-                                        }}
-                                    >
-                                        {isSelected ? '✓' : ''}
-                                    </span>
-                                    <input
-                                        checked={isSelected}
-                                        className="hidden"
-                                        type="checkbox"
-                                        onChange={() => toggle(v)}
-                                    />
-                                    <span>{l}</span>
-                                </label>
-                            );
-                        })}
+                    return (
+                        <label
+                            className="flex items-center gap-2.5 px-2.5 py-2 rounded-sm text-[0.8125rem] cursor-pointer"
+                            key={String(v)}
+                            onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
+                            onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
+                            style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
+                        >
+                            <span
+                                className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-[0.625rem] text-white"
+                                style={{
+                                    background: isSelected ? 'var(--color-orange-80)' : 'var(--color-transparent)',
+                                    border: `1px solid ${isSelected ? 'var(--color-orange-80)' : 'var(--color-zinc-500)'}`,
+                                }}
+                            >
+                                {isSelected ? '✓' : ''}
+                            </span>
+                            <input
+                                className="hidden"
+                                checked={isSelected}
+                                onChange={() => toggle(v)}
+                                type="checkbox"
+                            />
+                            <span>{l}</span>
+                        </label>
+                    );
+                })}
             </div>
         </div>
     );
@@ -417,7 +441,7 @@ function PageBtn({ children, active, disabled, onClick }: {
 }) {
     return (
         <button
-            className={`catalog__page-btn min-w-9 px-[13px] py-2 rounded-sm border border-zinc-700 font-medium text-xs [font-family:inherit] bg-transparent transition-all duration-150 cursor-pointer ${active ? 'catalog__page-btn--active' : ''} ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''}`}
+            className={`catalog__page-btn ${active ? 'catalog__page-btn--active' : ''} min-w-9 px-[13px] py-2 rounded-sm border border-zinc-700 font-medium text-xs [font-family:inherit] bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} transition-all duration-150 cursor-pointer`}
             disabled={disabled}
             onClick={onClick}
         >
@@ -435,7 +459,7 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
     }
 
     return (
-        <div className="flex items-center justify-between mt-7 text-xs tracking-[0.16em]">
+        <div className="flex items-center justify-between px-5 mt-7 text-xs tracking-[0.16em]">
             <span className="text-zinc-400">
                 {list.total === 0 ? '0' : `${list.page * list.PAGE_SIZE + 1}–${Math.min((list.page + 1) * list.PAGE_SIZE, list.total)}`}
                 {' OF '}
@@ -443,11 +467,10 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
             </span>
             <div className="flex gap-1">
                 <PageBtn disabled={list.page === 0} onClick={() => setPage(Math.max(0, list.page - 1))}>‹</PageBtn>
-                {showPages.map((p, i) => (
-                    p === '…'
-                        ? <span key={`e${i}`} className="px-2.5 py-2 text-zinc-500">…</span>
-                        : <PageBtn key={p} active={p === list.page} onClick={() => setPage(p)}>{p + 1}</PageBtn>
-                ))}
+                {showPages.map((p, i) => {
+                    if (p === '…') return <span className="px-2.5 py-2 text-zinc-500" key={`e${i}`}>…</span>;
+                    return <PageBtn key={p} active={p === list.page} onClick={() => setPage(p)}>{p + 1}</PageBtn>;
+                })}
                 <PageBtn disabled={list.page === list.pageCount - 1} onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}>›</PageBtn>
             </div>
         </div>
@@ -494,28 +517,28 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
 
     return (
         <div
-            className="pin-modal__overlay fixed inset-0 z-[1000] flex items-center justify-center"
+            className="pin-modal__overlay fixed inset-0 flex items-center justify-center z-[1000]"
             aria-modal="true"
             role="dialog"
         >
             <button
                 className="absolute inset-0 cursor-default"
                 aria-label="Close dialog"
+                onClick={close}
                 tabIndex={-1}
                 type="button"
-                onClick={close}
             />
             <form
-                className={`pin-modal relative w-[460px] max-w-[90vw] px-8 py-7 text-zinc-100 ${state === 'error' ? 'pin-modal--shake' : ''}`}
-                ref={formRef}
+                className={`pin-modal ${state === 'error' ? 'pin-modal--shake' : ''} relative w-[460px] max-w-[90vw] px-8 py-7 text-zinc-100`}
                 onSubmit={submit}
+                ref={formRef}
             >
                 <div className="flex justify-between mb-5 text-[0.6875rem] tracking-[0.18em] text-zinc-400">
                     <span>AUTHORIZATION</span>
                     <button
-                        className="border-none text-[0.6875rem] [font-family:inherit] bg-none text-zinc-400 cursor-pointer"
-                        type="button"
+                        className="border-none text-[0.6875rem] [font-family:inherit] bg-none text-zinc-400 hover:text-zinc-100 cursor-pointer"
                         onClick={close}
+                        type="button"
                     >
                         ESC
                     </button>
@@ -542,15 +565,15 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                     AUTHORIZATION
                 </label>
                 <input
-                    className={`pin-modal__input w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150 ${state === 'error' ? 'pin-modal__input--error' : ''}`}
-                    autoComplete="off"
                     id={pinInputId}
+                    className={`pin-modal__input ${state === 'error' ? 'pin-modal__input--error' : ''} w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150`}
+                    autoComplete="off"
                     maxLength={6}
+                    onChange={e => setPin(e.target.value)}
                     placeholder="• • • •"
                     ref={inputRef}
                     type="password"
                     value={pin}
-                    onChange={e => setPin(e.target.value)}
                 />
                 <div className="min-h-[18px] mt-2 text-[0.6875rem]" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
                     {state === 'error' && 'Invalid pin'}
@@ -560,14 +583,14 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                 </div>
                 <div className="flex gap-2 mt-5">
                     <button
-                        className="flex-1 px-4 py-3 border border-zinc-700 text-xs tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 cursor-pointer"
-                        type="button"
+                        className="flex-1 px-4 py-3 border border-zinc-700 text-xs tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 transition-all duration-150 hover:bg-[var(--color-white-20)] hover:border-[var(--color-orange-80)] hover:text-[var(--color-orange-80)] cursor-pointer"
                         onClick={close}
+                        type="button"
                     >
                         CANCEL
                     </button>
                     <button
-                        className="flex-[2] px-4 py-3 border-none font-medium text-xs tracking-[0.18em] [font-family:inherit] text-white transition-[background,opacity] duration-150"
+                        className="flex-[2] px-4 py-3 border-none font-medium text-xs tracking-[0.18em] [font-family:inherit] text-white transition-[background,opacity] duration-150 hover:opacity-90"
                         disabled={state === 'checking' || state === 'success'}
                         style={{
                             background: state === 'success' ? 'var(--color-sage-40)' : 'var(--color-orange-80)',
@@ -607,7 +630,7 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        if (target) setTimeout(() => inputRef.current?.focus(), 50);
+        if (target) setTimeout(() => inputRef.current?.focus(), FOCUS_DELAY);
     }, [target]);
 
     useEffect(() => {
@@ -625,11 +648,11 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         setTimeout(() => {
             if (/^\d{4}$/.test(pin)) {
                 setState('success');
-                setTimeout(() => close(), 1400);
+                setTimeout(() => close(), PIN_SUCCESS_DELAY);
             } else {
                 setState('error');
             }
-        }, 600);
+        }, PIN_VERIFY_DELAY);
     };
 
     return (
@@ -650,23 +673,25 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-function SortHeader({ field, label, list }: { field: string; label: string; list: TrackListState }) {
+function SortHeader({ align, field, label, list }: { align?: 'right'; field: string; label: string; list: TrackListState }) {
     const active = list.sort.field === field;
 
     return (
-        <button
-            className={`catalog__sort-btn inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer select-none ${active ? 'text-[var(--color-orange-80)]' : 'text-zinc-400'}`}
-            onClick={() => {
-                if (list.sort.field !== field) list.setSort({ dir: 'asc', field });
-                else if (list.sort.dir === 'asc') list.setSort({ dir: 'desc', field });
-                else list.setSort({ dir: 'asc', field: 'id' });
-            }}
-        >
-            {label}
-            {active && (
-                <span className="text-[0.5rem] transition-transform duration-150" style={{ transform: list.sort.dir === 'desc' ? 'rotate(180deg)' : 'none' }}>▲</span>
-            )}
-        </button>
+        <span className={align === 'right' ? 'text-right' : ''} aria-sort={active ? (list.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} role="columnheader">
+            <button
+                className={`catalog__sort-btn inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer select-none ${active ? 'text-[var(--color-orange-80)]' : 'text-zinc-400'}`}
+                onClick={() => {
+                    if (list.sort.field !== field) list.setSort({ dir: 'asc', field });
+                    else if (list.sort.dir === 'asc') list.setSort({ dir: 'desc', field });
+                    else list.setSort({ dir: 'asc', field: 'id' });
+                }}
+            >
+                {label}
+                {active && (
+                    <span className="text-[0.5rem] transition-transform duration-150" style={{ transform: list.sort.dir === 'desc' ? 'rotate(180deg)' : 'none' }}>▲</span>
+                )}
+            </button>
+        </span>
     );
 }
 
@@ -724,7 +749,8 @@ function useTrackList(tracks: Track[]) {
         const direction = sort.dir === 'asc' ? 1 : -1;
 
         results = [...results].sort((a, b) => {
-            let valA: string | number, valB: string | number;
+            let valA: string | number;
+            let valB: string | number;
 
             if (sort.field === 'title') {
                 valA = (a.title || '~~~').toLowerCase();

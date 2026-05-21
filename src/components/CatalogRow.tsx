@@ -1,16 +1,15 @@
-import { PLAYER } from '@lib/store';
-import { buildSlug, fmtDuration } from '@lib/utils';
 import { HeartIcon } from '@components/HeartIcon';
+import { PLAYER } from '@lib/store';
 import { StarIcon } from '@components/StarIcon';
+import { buildSlug, fmtDuration } from '@lib/utils';
 
-function DLBtn({ children, disabled, title, onClick }: {
-    children: React.ReactNode; disabled?: boolean; onClick: () => void; title?: string;
+function DLBtn({ children, disabled, onClick }: {
+    children: React.ReactNode; disabled?: boolean; onClick: () => void;
 }) {
     return (
         <button
             className="catalog__dl-btn px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-[0.6875rem] tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-300 transition-all duration-150 cursor-pointer"
             disabled={disabled}
-            title={title}
             onClick={onClick}
         >
             {children}
@@ -18,14 +17,13 @@ function DLBtn({ children, disabled, title, onClick }: {
     );
 }
 
-function DLLink({ children, disabled, href, title }: {
-    children: React.ReactNode; disabled?: boolean; href: string; title?: string;
+function DLLink({ children, disabled, href }: {
+    children: React.ReactNode; disabled?: boolean; href: string;
 }) {
     if (disabled) {
         return (
             <span
                 className="inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-[0.6875rem] tracking-[0.18em] no-underline bg-transparent text-zinc-300 opacity-40 cursor-not-allowed"
-                title={title}
             >
                 {children}
             </span>
@@ -37,7 +35,6 @@ function DLLink({ children, disabled, href, title }: {
             className="catalog__dl-btn inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-[0.6875rem] tracking-[0.18em] no-underline [font-family:inherit] bg-transparent text-zinc-300 transition-all duration-150 cursor-pointer"
             download
             href={href}
-            title={title}
         >
             {children}
         </a>
@@ -49,8 +46,8 @@ function PlayingDots() {
         <div className="flex items-center gap-0.5 h-3.5">
             {[0, 1, 2, 3].map(i => (
                 <div
-                    key={i}
                     className="w-0.5 h-3.5 bg-[var(--color-orange-80)]"
+                    key={i}
                     style={{ animation: `player__vu-bounce 0.6s ease-in-out ${i * 0.1}s infinite`, transformOrigin: 'center' }}
                 />
             ))}
@@ -72,10 +69,7 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
 
     return (
         <div
-            className={`catalog__row grid items-center gap-3.5 px-5 py-6 text-sm transition-[background] duration-150 delay-[15ms] cursor-pointer ${isPlaying ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''}`}
-            role="button"
-            style={{ boxShadow: idx ? 'inset 0 1px 0 var(--color-white-20)' : 'none' }}
-            tabIndex={0}
+            className={`catalog__row ${isPlaying ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''} grid items-center gap-5 px-5 py-6 text-sm transition-[background] duration-150 delay-[10ms] cursor-pointer`}
             onClick={(e) => {
                 onPlay();
                 (e.currentTarget as HTMLElement).blur();
@@ -87,28 +81,27 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
                     onPlay();
                 }
             }}
+            role="button"
+            style={{ boxShadow: idx ? 'inset 0 1px 0 var(--color-white-20)' : 'none' }}
+            tabIndex={0}
         >
             <div className="flex items-center justify-center">
-                {isPlaying
-                    ? <PlayingDots />
-                    : t.star
-                        ? (
-                                <span className="text-[var(--color-gold)]">
-                                    <StarIcon />
-                                    <span className="sr-only">Starred</span>
-                                </span>
-                            )
-                        : t.heart
-                            ? (
-                                    <span className="text-[var(--color-rose)]">
-                                        <HeartIcon />
-                                        <span className="sr-only">Hearted</span>
-                                    </span>
-                                )
-                            : null}
+                {isPlaying && <PlayingDots />}
+                {!isPlaying && t.star && (
+                    <span className="text-[var(--color-gold)]">
+                        <StarIcon />
+                        <span className="sr-only">Starred</span>
+                    </span>
+                )}
+                {!isPlaying && !t.star && t.heart && (
+                    <span className="text-[var(--color-rose)]">
+                        <HeartIcon />
+                        <span className="sr-only">Hearted</span>
+                    </span>
+                )}
             </div>
             <span className="text-[0.8125rem] tracking-[0.04em] tabular-nums text-zinc-400">{t.id}</span>
-            <div className="min-w-0 flex flex-col gap-[5px]">
+            <div className="flex flex-col min-w-0 gap-[5px]">
                 <div className={`catalog__track-title font-medium text-sm truncate tracking-[-0.005em] leading-[1.2] font-inter ${t.title ? 'text-zinc-100' : 'text-zinc-500 italic'}`}>
                     {t.title || ' '}
                 </div>
@@ -128,11 +121,11 @@ export function CatalogRow({ idx, isPlaying, pin, t }: {
                 </div>
             </div>
             <span className="text-[0.8125rem] tabular-nums text-zinc-400">{t.title ? t.year : ''}</span>
-            <span className="text-[0.8125rem] tabular-nums text-zinc-400">{t.title ? fmtDuration(t.duration) : ''}</span>
-            <div className="flex gap-1.5 justify-start" aria-label="Download options" role="toolbar" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                <DLLink disabled={!t.master} href={`/audio/${slug}.mp3`} title="Download MP3">MP3</DLLink>
-                <DLBtn disabled={!t.master} title={t.master ? 'Download WAV master' : 'No master available'} onClick={() => pin.open(t, 'master')}>WAV</DLBtn>
-                <DLBtn disabled={!t.mixdown} title={t.mixdown ? 'Download mixdown' : 'No mixdown available'} onClick={() => { if (t.mixdown) pin.open(t, 'mixdown'); }}>MIX</DLBtn>
+            <span className="text-[0.8125rem] tabular-nums text-right text-zinc-400">{t.title ? fmtDuration(t.duration) : ''}</span>
+            <div className="flex justify-start gap-1.5 pl-4" aria-label="Download options" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="toolbar">
+                <DLLink disabled={!t.master} href={`/audio/${slug}.mp3`}>MP3</DLLink>
+                <DLBtn disabled={!t.master} onClick={() => pin.open(t, 'master')}>WAV</DLBtn>
+                <DLBtn disabled={!t.mixdown} onClick={() => { if (t.mixdown) pin.open(t, 'mixdown'); }}>MIX</DLBtn>
             </div>
         </div>
     );

@@ -1,5 +1,7 @@
 ---
-const { tracks } = Astro.props;
+const { tracks } = Astro.props as { tracks: Track[] };
+
+const TICKER = ['ideate', 'sample', 'synthesize', 'record', 'compose', 'arrange', 'produce', 'mix', 'master', 'publish'];
 
 const musicCount = tracks.filter(t => t.category === 'music').length;
 const productionsCount = tracks.filter(t => t.category === 'productions').length;
@@ -18,21 +20,28 @@ const stats = [
     class="hero px-10 py-48 border-b border-zinc-800"
 >
     <div class="max-w-[80rem] mx-auto">
-        <h1 class="hero__title mb-16 font-semibold text-9xl tracking-[-0.045em] leading-none font-inter text-zinc-100">
-            aephonics
+        <h1 class="hero__title mb-16 font-semibold text-9xl tracking-[-0.045em] leading-none font-inter text-zinc-100" aria-label="aephonics from concept to master.">
+            <span class="hero__line opacity-0" aria-hidden="true">aephonics</span>
             <br />
-            <span class="text-zinc-400">from concept</span>
+            <span class="hero__line text-zinc-400 opacity-0" aria-hidden="true">from concept</span>
             <br />
-            <span class="text-[var(--color-orange-80)]">to master.</span>
+            <span class="hero__line text-[var(--color-orange-80)] opacity-0" aria-hidden="true">to master.</span>
         </h1>
-        <p class="hero__subtitle max-w-[49rem] text-2xl leading-relaxed font-inter text-zinc-300">
+        <p class="hero__subtitle max-w-[49rem] text-2xl leading-relaxed font-inter text-zinc-300 opacity-0">
             Frequencies shaped in a room in Austin since 2015. Original compositions, late-night sessions, ghost productions — moving between hip-hop, latin pop, ambient, and territories that resist classification.
         </p>
         <div
-            class="grid grid-cols-4 gap-8 mt-24 p-7 border border-zinc-800 bg-zinc-800"
+            class="hero__stats relative grid grid-cols-4 gap-8 mt-24 p-7 border border-zinc-800 bg-zinc-800 opacity-0"
         >
+            <div class="hero__ticker absolute -top-9 right-7 grid justify-items-end w-fit h-7 overflow-hidden" aria-hidden="true">
+                {TICKER.map(word => (
+                    <span class="hero__ticker-word col-start-1 row-start-1 font-mono text-base tracking-[0.2em] text-zinc-600 opacity-0">
+                        {word}
+                    </span>
+                ))}
+            </div>
             {stats.map(({ accent, count, label }, i) => (
-                <div class={`${i ? 'border-l-2 border-zinc-700' : ''} pl-[1.125rem] text-center`}>
+                <div class={`pl-[1.125rem] ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
                     <div class="mb-2.5 text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</div>
                     <div class:list={['hero__stat-count font-medium text-[2.5rem] tracking-[-0.025em] leading-none font-inter', accent ? 'text-[var(--color-orange-80)]' : 'text-zinc-100']}>
                         {count}
@@ -42,3 +51,122 @@ const stats = [
         </div>
     </div>
 </section>
+
+<script>
+    import gsap from 'gsap';
+
+    const CHAR_DURATION = 0.5;
+    const CHAR_STAGGER = 0.1;
+    const CHAR_Y = 20;
+    const HOLD = 2;
+    const LINE_DURATION = 0.5;
+    const LINE_Y = 30;
+    const SECTION_DURATION = 0.5;
+    const SECTION_Y = 30;
+    const SLIDE = 0.5;
+
+    function cycle(distance: number, words: NodeListOf<HTMLElement>): void {
+        const tl = gsap.timeline({ onComplete: () => cycle(distance, words) });
+
+        tl.fromTo(words[0], { x: distance }, { duration: SLIDE, ease: 'power2.out', x: 0 });
+
+        for (let i = 0; i < words.length - 1; i++) {
+            tl.to(words[i], { duration: SLIDE, ease: 'power2.inOut', x: -distance }, `+=${HOLD}`);
+            tl.fromTo(words[i + 1], { x: distance }, { duration: SLIDE, ease: 'power2.inOut', x: 0 }, '<');
+        }
+
+        tl.to(words[words.length - 1], { duration: SLIDE, ease: 'power2.in', x: -distance }, `+=${HOLD}`);
+    }
+
+    function splitChars(el: HTMLElement): HTMLElement[] {
+        const text = el.textContent || '';
+        const chars: HTMLElement[] = [];
+
+        el.textContent = '';
+        gsap.set(el, { opacity: 1 });
+
+        for (const char of text) {
+            if (char === ' ') {
+                el.appendChild(document.createTextNode(' '));
+                continue;
+            }
+
+            const span = document.createElement('span');
+            span.textContent = char;
+            el.appendChild(span);
+            chars.push(span);
+        }
+
+        gsap.set(chars, { display: 'inline-block', opacity: 0, y: CHAR_Y });
+
+        return chars;
+    }
+
+    function initHero(): void {
+        const lines = document.querySelectorAll<HTMLElement>('.hero__line');
+        const stats = document.querySelector<HTMLElement>('.hero__stats');
+        const subtitle = document.querySelector<HTMLElement>('.hero__subtitle');
+        const ticker = document.querySelector<HTMLElement>('.hero__ticker');
+        const words = document.querySelectorAll<HTMLElement>('.hero__ticker-word');
+
+        if (!lines.length || !stats || !subtitle || !ticker || !words.length) return;
+
+        const distance = ticker.offsetWidth;
+
+        gsap.set(words, { opacity: 1, x: distance });
+
+        const skipEntrance = window.scrollY > 0
+            || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        if (skipEntrance) {
+            lines.forEach(line => gsap.set(line, { opacity: 1 }));
+            gsap.set(stats, { opacity: 1 });
+            gsap.set(subtitle, { opacity: 1 });
+            cycle(distance, words);
+            return;
+        }
+
+        const chars = splitChars(lines[0]);
+        const master = gsap.timeline({ delay: 1 });
+
+        gsap.set(lines[1], { y: LINE_Y });
+        gsap.set(lines[2], { y: LINE_Y });
+        gsap.set(stats, { y: SECTION_Y });
+        gsap.set(subtitle, { y: SECTION_Y });
+
+        master.to(chars, {
+            duration: CHAR_DURATION,
+            ease: 'power3.out',
+            opacity: 1,
+            stagger: CHAR_STAGGER,
+            y: 0,
+        });
+        master.to(lines[1], {
+            duration: LINE_DURATION,
+            ease: 'power3.out',
+            opacity: 1,
+            y: 0,
+        });
+        master.to(lines[2], {
+            duration: LINE_DURATION,
+            ease: 'power3.out',
+            opacity: 1,
+            y: 0,
+        });
+        master.to(subtitle, {
+            duration: SECTION_DURATION,
+            ease: 'power3.out',
+            opacity: 1,
+            y: 0,
+        });
+        master.to(stats, {
+            duration: SECTION_DURATION,
+            ease: 'power3.out',
+            opacity: 1,
+            y: 0,
+        });
+        master.call(() => cycle(distance, words));
+    }
+
+    document.addEventListener('astro:page-load', initHero);
+</script>

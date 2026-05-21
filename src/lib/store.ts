@@ -21,7 +21,7 @@ const INITIAL: PlayerState = {
     position: 0,
     repeat: true,
     trackId: null,
-    volume: 0.78,
+    volume: 1,
 };
 
 function createPlayerStore() {
@@ -42,7 +42,8 @@ function createPlayerStore() {
                     volume: saved.volume ?? INITIAL.volume,
                 };
             }
-        } catch {
+        } catch (e) {
+            console.warn('Failed to restore player state', e);
             return { ...INITIAL };
         }
 
@@ -50,45 +51,14 @@ function createPlayerStore() {
     };
 
     const store = {
-        listeners: new Set<(state: PlayerState) => void>(),
-        state: restore(),
-
-        get() {
-            return store.state;
-        },
-
-        subscribe(fn: (state: PlayerState) => void) {
-            store.listeners.add(fn);
-
-            return () => {
-                store.listeners.delete(fn);
-            };
-        },
-
         emit() {
             for (const fn of store.listeners) {
                 fn(store.state);
             }
         },
 
-        save() {
-            try {
-                localStorage.setItem('player', JSON.stringify({
-                    collapsed: store.state.collapsed,
-                    highpass: store.state.highpass,
-                    lowpass: store.state.lowpass,
-                    repeat: store.state.repeat,
-                    volume: store.state.volume,
-                }));
-            } catch {
-                return;
-            }
-        },
-
-        set(patch: Partial<PlayerState>) {
-            store.state = { ...store.state, ...patch };
-            store.save();
-            store.emit();
+        get() {
+            return store.state;
         },
 
         getAudio(): HTMLAudioElement {
@@ -139,6 +109,8 @@ function createPlayerStore() {
             return audio;
         },
 
+        listeners: new Set<(state: PlayerState) => void>(),
+
         load(track: Track) {
             const el = store.getAudio();
             const currentSrc = el.src ? new URL(el.src).pathname : '';
@@ -166,11 +138,31 @@ function createPlayerStore() {
             el.load();
         },
 
+        save() {
+            try {
+                localStorage.setItem('player', JSON.stringify({
+                    collapsed: store.state.collapsed,
+                    highpass: store.state.highpass,
+                    lowpass: store.state.lowpass,
+                    repeat: store.state.repeat,
+                    volume: store.state.volume,
+                }));
+            } catch (e) {
+                console.warn('Failed to save player state', e);
+            }
+        },
+
         seek(position: number) {
             const el = store.getAudio();
             const clamped = Math.max(0, Math.min(position, el.duration || store.state.duration));
             el.currentTime = clamped;
             store.set({ position: clamped });
+        },
+
+        set(patch: Partial<PlayerState>) {
+            store.state = { ...store.state, ...patch };
+            store.save();
+            store.emit();
         },
 
         setRepeat(repeat: boolean) {
@@ -181,6 +173,16 @@ function createPlayerStore() {
             const el = store.getAudio();
             el.volume = volume;
             store.set({ volume });
+        },
+
+        state: restore(),
+
+        subscribe(fn: (state: PlayerState) => void) {
+            store.listeners.add(fn);
+
+            return () => {
+                store.listeners.delete(fn);
+            };
         },
 
         toggle() {

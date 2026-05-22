@@ -24,7 +24,12 @@ const VU_DECAY = 0.88;
 const VU_FLOOR = 0.04;
 const VU_SEGS = 16;
 const WAVEFORM_AMPLITUDE = 88;
+const WAVEFORM_BAR_OFFSET = 0.5;
+const WAVEFORM_BAR_PITCH = 2;
+const WAVEFORM_BAR_RADIUS = 0.4;
+const WAVEFORM_BAR_WIDTH = 1;
 const WAVEFORM_HEIGHT = BARS_AREA_HEIGHT + TICK_AREA_HEIGHT;
+const WAVEFORM_VIEWBOX_HEIGHT = 100;
 
 let trackList: Track[] = [];
 
@@ -34,29 +39,68 @@ function formatCounter(seconds: number): string {
     return `${String(minutes).padStart(2, '0')}:${String(remaining).padStart(2, '0')}`;
 }
 
-function Fader({ className, label, resetValue, value, onChange }: {
-    className?: string; label: string; resetValue?: number; value: number; onChange: (v: number) => void;
+function useCurrentTrack(): Track | null {
+    const player = usePlayer();
+
+    if (!player.trackId) return null;
+
+    return trackList.find(track => track.id === player.trackId) ?? null;
+}
+
+function useVULevels() {
+    const [levels, setLevels] = useState([0, 0]);
+    const smoothRef = useRef([0, 0]);
+
+    useEffect(() => {
+        let raf: number;
+        let wasZero = true;
+
+        const tick = () => {
+            const [rawL, rawR] = PLAYER.getLevels();
+            const prev = smoothRef.current;
+            const left = Math.max(rawL, prev[0] * VU_DECAY);
+            const right = Math.max(rawR, prev[1] * VU_DECAY);
+            smoothRef.current = [left, right];
+            const outputLeft = left < VU_FLOOR ? 0 : left;
+            const outputRight = right < VU_FLOOR ? 0 : right;
+            const isZero = outputLeft === 0 && outputRight === 0;
+
+            if (!isZero || !wasZero) setLevels([outputLeft, outputRight]);
+            wasZero = isZero;
+            raf = requestAnimationFrame(tick);
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, []);
+
+    return levels;
+}
+
+function Fader({ label, resetValue, value, onChange }: {
+    label: string; resetValue?: number; value: number; onChange: (v: number) => void;
 }) {
     const trackRef = useRef<HTMLDivElement>(null);
-    const onDown = (e: React.MouseEvent) => {
+    const handlePointerDown = (e: React.PointerEvent) => {
         e.preventDefault();
-        const move = (ev: MouseEvent) => {
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        const move = (ev: PointerEvent) => {
             if (!trackRef.current) return;
             const rect = trackRef.current.getBoundingClientRect();
             onChange(Math.max(0, Math.min(1, 1 - (ev.clientY - rect.top) / rect.height)));
         };
         const up = () => {
-            window.removeEventListener('mousemove', move);
-            window.removeEventListener('mouseup', up);
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
         };
         move(e.nativeEvent);
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', up);
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
     };
 
     return (
-        <div className={`flex flex-col items-center gap-1.5 ${className || ''}`}>
-            <span className="min-w-[1.625rem] text-[0.5625rem] tabular-nums text-center text-[var(--color-cream-60)]">{Math.round(value * 100)}</span>
+        <div className="flex flex-col items-center gap-1.5">
+            <span className="min-w-7 text-xs tabular-nums text-center text-[var(--color-cream-60)]">{Math.round(value * 100)}</span>
             <div
                 className="player__fader-track relative w-4 rounded-sm"
                 aria-label={label === 'VOL' ? 'Volume' : `${label} filter`}
@@ -70,10 +114,10 @@ function Fader({ className, label, resetValue, value, onChange }: {
                     if (e.key === 'ArrowUp') onChange(Math.min(1, value + 0.05));
                     else if (e.key === 'ArrowDown') onChange(Math.max(0, value - 0.05));
                 }}
-                onMouseDown={onDown}
+                onPointerDown={handlePointerDown}
                 ref={trackRef}
                 role="slider"
-                style={{ height: FADER_HEIGHT }}
+                style={{ height: FADER_HEIGHT, touchAction: 'none' }}
                 tabIndex={0}
             >
                 {FADER_TICKS.map(p => (
@@ -88,7 +132,7 @@ function Fader({ className, label, resetValue, value, onChange }: {
                     <div className="player__fader-line absolute left-0 right-0 top-1/2 h-px -translate-y-1/2" />
                 </div>
             </div>
-            <span className="font-semibold text-[0.5625rem] tracking-[0.18em] text-[var(--color-cream-40)]">{label}</span>
+            <span className="font-semibold text-xs tracking-[0.2em] text-[var(--color-cream-60)]">{label}</span>
         </div>
     );
 }
@@ -97,7 +141,7 @@ function ProgressBar() {
     const player = usePlayer();
     const track = useCurrentTrack();
     const ref = useRef<HTMLDivElement>(null);
-    const duration = player.duration || track?.duration || 0;
+    const duration = player.duration || track?.data.duration || 0;
     const fraction = duration ? player.position / duration : 0;
 
     return (
@@ -151,7 +195,7 @@ function TransportButton({ children, active, disabled, label, onClick }: {
 }) {
     return (
         <button
-            className={`player__transport ${active ? 'player__transport--active' : ''} flex items-center justify-center w-10 h-10 rounded-sm transition-[border-color,color,opacity] duration-150 cursor-pointer`}
+            className={`player__transport ${active ? 'player__transport--active' : ''} flex items-center justify-center w-9 h-9 rounded-sm transition-[border-color,color,opacity] duration-150 cursor-pointer`}
             aria-label={label}
             disabled={disabled}
             onClick={onClick}
@@ -162,14 +206,14 @@ function TransportButton({ children, active, disabled, label, onClick }: {
 }
 
 function VUMeter({ label, level }: { label: string; level: number }) {
-    const lit = Math.round(level * VU_SEGS);
+    const litCount = Math.round(level * VU_SEGS);
 
     return (
         <div className="flex flex-col items-center gap-1.5">
-            <span className="min-w-[1.625rem] text-[0.5625rem] tabular-nums text-center text-[var(--color-cream-60)]">{Math.round(level * 100)}</span>
+            <span className="min-w-7 text-xs tabular-nums text-center text-[var(--color-cream-60)]">{Math.round(level * 100)}</span>
             <div className="flex flex-col-reverse gap-px" style={{ height: FADER_HEIGHT }}>
                 {Array.from({ length: VU_SEGS }).map((_, i) => {
-                    const on = i < lit;
+                    const on = i < litCount;
                     let color: string;
 
                     if (i > VU_SEGS - 4) color = 'var(--color-red)';
@@ -184,7 +228,7 @@ function VUMeter({ label, level }: { label: string; level: number }) {
                     );
                 })}
             </div>
-            <span className="font-semibold text-[0.5625rem] tracking-[0.18em] text-[var(--color-cream-40)]">{label}</span>
+            <span className="font-semibold text-xs tracking-[0.2em] text-[var(--color-cream-60)]">{label}</span>
         </div>
     );
 }
@@ -193,11 +237,11 @@ function Waveform() {
     const player = usePlayer();
     const track = useCurrentTrack();
     const ref = useRef<HTMLDivElement>(null);
-    const [hoverPos, setHoverPos] = useState<number | null>(null);
-    const [hoverPx, setHoverPx] = useState<number | null>(null);
+    const [hoverTime, setHoverTime] = useState<number | null>(null);
+    const [hoverPixel, setHoverPixel] = useState<number | null>(null);
     const peaks = track?.peaks.length ? track.peaks : null;
-    const duration = player.duration || track?.duration || 0;
-    const playedFrac = duration ? player.position / duration : 0;
+    const duration = player.duration || track?.data.duration || 0;
+    const playedFraction = duration ? player.position / duration : 0;
 
     return (
         <div
@@ -211,69 +255,70 @@ function Waveform() {
                 if (e.key === 'ArrowLeft') PLAYER.seek(Math.max(0, player.position - SEEK_STEP));
                 else if (e.key === 'ArrowRight') PLAYER.seek(Math.min(duration, player.position + SEEK_STEP));
             }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
                 if (!track || !ref.current) return;
                 e.preventDefault();
-                const seek = (ev: MouseEvent) => {
+                (e.target as HTMLElement).setPointerCapture(e.pointerId);
+                const seek = (ev: PointerEvent) => {
                     if (!ref.current) return;
                     const rect = ref.current.getBoundingClientRect();
                     PLAYER.seek(Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width)) * duration);
                 };
                 const up = () => {
-                    window.removeEventListener('mousemove', seek);
-                    window.removeEventListener('mouseup', up);
+                    window.removeEventListener('pointermove', seek);
+                    window.removeEventListener('pointerup', up);
                 };
                 seek(e.nativeEvent);
-                window.addEventListener('mousemove', seek);
-                window.addEventListener('mouseup', up);
+                window.addEventListener('pointermove', seek);
+                window.addEventListener('pointerup', up);
             }}
             onMouseLeave={() => {
-                setHoverPos(null);
-                setHoverPx(null);
+                setHoverTime(null);
+                setHoverPixel(null);
             }}
             onMouseMove={(e) => {
                 if (!track || !ref.current) return;
                 const rect = ref.current.getBoundingClientRect();
                 const x = e.clientX - rect.left;
-                setHoverPx(x);
-                setHoverPos((x / rect.width) * duration);
+                setHoverPixel(x);
+                setHoverTime((x / rect.width) * duration);
             }}
             ref={ref}
             role="slider"
-            style={{ height: WAVEFORM_HEIGHT }}
+            style={{ height: WAVEFORM_HEIGHT, touchAction: 'none' }}
             tabIndex={0}
         >
             <div className="absolute left-0 right-0 top-0" style={{ height: BARS_AREA_HEIGHT }}>
                 <div className={`player__waveform-center ${!track ? 'player__waveform-center--idle' : ''} absolute left-0 right-0 top-1/2 h-px`} />
                 {peaks && (
-                    <svg className="absolute inset-0" height="100%" preserveAspectRatio="none" viewBox={`0 0 ${peaks.length * 2} 100`} width="100%">
+                    <svg className="absolute inset-0" height="100%" preserveAspectRatio="none" viewBox={`0 0 ${peaks.length * WAVEFORM_BAR_PITCH} ${WAVEFORM_VIEWBOX_HEIGHT}`} width="100%">
                         {peaks.map((p, i) => {
-                            const x = i * 2 + 0.5;
-                            const isPlayed = (i / peaks.length) <= playedFrac;
+                            const x = i * WAVEFORM_BAR_PITCH + WAVEFORM_BAR_OFFSET;
+                            const isPlayed = (i / peaks.length) <= playedFraction;
                             const h = p * WAVEFORM_AMPLITUDE;
-                            const y = 50 - h / 2;
-                            const inHover = hoverPx != null && (i / peaks.length) <= (hoverPx / (ref.current?.clientWidth || 1)) && !isPlayed;
+                            const y = WAVEFORM_VIEWBOX_HEIGHT / 2 - h / 2;
+                            const isHovered = hoverPixel != null && (i / peaks.length) <= (hoverPixel / (ref.current?.clientWidth || 1)) && !isPlayed;
                             let fill: string;
                             if (isPlayed) fill = 'var(--color-orange-80)';
-                            else if (inHover) fill = 'var(--color-orange-60)';
+                            else if (isHovered) fill = 'var(--color-orange-60)';
                             else fill = 'var(--color-cream-40)';
-                            return <rect fill={fill} height={h} key={i} rx="0.4" width={1} x={x} y={y} />;
+                            return <rect fill={fill} height={h} key={i} rx={WAVEFORM_BAR_RADIUS} width={WAVEFORM_BAR_WIDTH} x={x} y={y} />;
                         })}
                     </svg>
                 )}
             </div>
-            <div className="absolute left-0 right-0 border-t border-[var(--color-cream-20)]" style={{ background: 'var(--color-zinc-950)', height: TICK_AREA_HEIGHT, top: BARS_AREA_HEIGHT }}>
+            <div className="absolute left-0 right-0 border-t border-zinc-800" style={{ background: 'var(--color-zinc-950)', height: TICK_AREA_HEIGHT, top: BARS_AREA_HEIGHT }}>
                 {track && duration > 0 && (() => {
                     const ticks: React.ReactNode[] = [];
                     let step = TICK_SHORT_STEP;
                     if (duration > TICK_LONG_THRESHOLD) step = TICK_LONG_STEP;
                     else if (duration > TICK_MEDIUM_THRESHOLD) step = TICK_MEDIUM_STEP;
                     for (let i = step; i < duration; i += step) {
-                        const pct = (i / duration) * 100;
+                        const percent = (i / duration) * 100;
                         ticks.push(
                             <div key={`t${i}`}>
-                                <div className="player__tick absolute top-0 w-px h-1" style={{ left: `${pct}%` }} />
-                                <div className="player__tick-label absolute text-[0.625rem]" style={{ left: `${pct}%`, top: 5, transform: 'translateX(-50%)' }}>
+                                <div className="player__tick absolute top-0 w-px h-1" style={{ left: `${percent}%` }} />
+                                <div className="player__tick-label absolute text-xs" style={{ left: `${percent}%`, top: 5, transform: 'translateX(-50%)' }}>
                                     {formatDuration(i)}
                                 </div>
                             </div>,
@@ -283,68 +328,34 @@ function Waveform() {
                 })()}
             </div>
             {track && (
-                <div className="player__playhead absolute z-[2] w-0.5" style={{ height: BARS_AREA_HEIGHT + 4, left: `${playedFrac * 100}%`, top: -2, transform: 'translateX(-1px)' }}>
+                <div className="player__playhead absolute z-[2] w-0.5" style={{ height: BARS_AREA_HEIGHT + 4, left: `${playedFraction * 100}%`, top: -2, transform: 'translateX(-1px)' }}>
                     <div className="absolute top-[-3px] left-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-[var(--color-cream)] -translate-x-1/2" />
                     <div className="absolute bottom-[-3px] left-1/2 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[5px] border-b-[var(--color-cream)] -translate-x-1/2" />
                 </div>
             )}
-            {hoverPos !== null && track && (
-                <div className="player__hover-time absolute px-[7px] py-0.5 text-[0.6875rem]" style={{ left: hoverPx!, top: 6, transform: 'translateX(-50%)' }}>
-                    {formatDuration(hoverPos)}
+            {hoverTime !== null && hoverPixel !== null && track && (
+                <div className="player__hover-time absolute px-[7px] py-0.5 text-xs" style={{ left: hoverPixel, top: 6, transform: 'translateX(-50%)' }}>
+                    {formatDuration(hoverTime)}
                 </div>
             )}
         </div>
     );
 }
 
-function useCurrentTrack(): Track | null {
-    const player = usePlayer();
-
-    if (!player.trackId) return null;
-
-    return trackList.find(t => t.id === player.trackId) ?? null;
-}
-
-function useVU() {
-    const [levels, setLevels] = useState([0, 0]);
-    const smoothRef = useRef([0, 0]);
-
-    useEffect(() => {
-        let raf: number;
-        let wasZero = true;
-
-        const tick = () => {
-            const [rawL, rawR] = PLAYER.getLevels();
-            const prev = smoothRef.current;
-            const l = Math.max(rawL, prev[0] * VU_DECAY);
-            const r = Math.max(rawR, prev[1] * VU_DECAY);
-            smoothRef.current = [l, r];
-            const outL = l < VU_FLOOR ? 0 : l;
-            const outR = r < VU_FLOOR ? 0 : r;
-            const isZero = outL === 0 && outR === 0;
-
-            if (!isZero || !wasZero) setLevels([outL, outR]);
-            wasZero = isZero;
-            raf = requestAnimationFrame(tick);
-        };
-
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-    }, []);
-
-    return levels;
-}
-
 function PlayerInner({ tracks }: { tracks: Track[] }) {
     trackList = tracks;
     const player = usePlayer();
     const track = useCurrentTrack();
-    const [vuLeft, vuRight] = useVU();
+    const [vuLeft, vuRight] = useVULevels();
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            const tag = (e.target as HTMLElement).tagName?.toLowerCase();
-            if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement).isContentEditable) return;
+            const el = e.target as HTMLElement;
+            const tag = el.tagName?.toLowerCase();
+            if (tag === 'input' || tag === 'textarea' || el.isContentEditable) return;
+            if (tag === 'button' || tag === 'a' || tag === 'select') return;
+            const role = el.getAttribute('role');
+            if (role === 'slider' || role === 'option' || role === 'listbox') return;
 
             if (e.key === ' ' || e.code === 'Space') {
                 e.preventDefault();
@@ -357,10 +368,10 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
             } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 const state = PLAYER.get();
-                const current = trackList.find(x => x.id === state.trackId);
-                if (!current) return;
+                const currentTrack = trackList.find(x => x.id === state.trackId);
+                if (!currentTrack) return;
                 const step = e.shiftKey ? SEEK_STEP_SHIFT : SEEK_STEP;
-                PLAYER.seek(Math.min(current.duration, state.position + step));
+                PLAYER.seek(Math.min(currentTrack.data.duration, state.position + step));
             } else if (e.key === 'r' || e.key === 'R') {
                 PLAYER.setRepeat(!PLAYER.get().repeat);
             }
@@ -372,7 +383,7 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
 
     return (
         <div
-            className={`player ${player.collapsed ? 'player--collapsed' : ''} sticky top-0 z-[100] font-mono text-sm transition-[box-shadow] duration-150`}
+            className={`player ${player.collapsed ? 'player--collapsed' : ''} sticky top-0 z-[100] font-mono text-base transition-[box-shadow] duration-150`}
             aria-label="Audio player"
             role="region"
         >
@@ -402,12 +413,12 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
                         <RepeatIcon />
                     </TransportButton>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className={`player__track-title font-medium text-2xl tracking-[-0.01em] truncate leading-[1.2] font-inter ${track ? 'text-[var(--color-cream)]' : 'text-[var(--color-cream-40)]'}`}>
-                        {track ? (track.title || '(untitled session)') : 'Select a track'}
+                <div className="flex-1 min-w-0" aria-live="polite">
+                    <div className={`player__track-title font-medium text-2xl tracking-[-0.01em] truncate leading-tight font-inter ${track ? 'text-[var(--color-cream)]' : 'text-[var(--color-cream-40)]'}`}>
+                        {track ? (track.data.title || '(untitled session)') : 'Select a track'}
                     </div>
-                    <div className="mt-0.5 text-[0.6875rem] tracking-[0.2em] text-[var(--color-cream-60)]">
-                        {track ? `${categoryLabel(track.category).toUpperCase()} · ${track.id} · ${track.year} · BPM ${track.bpm.join(' ')} · ${track.key.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}` : 'NO TAPE LOADED'}
+                    <div className="mt-0.5 text-xs tracking-[0.2em] text-[var(--color-cream-60)]">
+                        {track ? `${categoryLabel(track.category).toUpperCase()} · ${track.id} · ${track.data.year}${track.data.bpm > 0 ? ` · BPM ${track.data.bpm}${track.data.tempo ? ` ${track.data.tempo}` : ''}` : ''} · ${track.data.keys.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}` : 'NO TAPE LOADED'}
                     </div>
                 </div>
                 <div className="player__expandable">
@@ -416,11 +427,11 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
                         {' '}
                         <span className="text-[var(--color-cream-40)]">/</span>
                         {' '}
-                        <span className="text-[var(--color-cream-60)]">{formatCounter(player.duration || track?.duration || 0)}</span>
+                        <span className="text-[var(--color-cream-60)]">{formatCounter(player.duration || track?.data.duration || 0)}</span>
                     </div>
                 </div>
-                <div className="player__expandable flex items-center gap-3">
-                    <div className="flex items-center gap-0.5" aria-hidden="true">
+                <div className="player__expandable flex items-center gap-4">
+                    <div className="flex items-center gap-1.5" aria-hidden="true">
                         <VUMeter label="L" level={vuLeft} />
                         <VUMeter label="R" level={vuRight} />
                     </div>

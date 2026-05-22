@@ -7,7 +7,22 @@ import { buildSlug } from '@lib/utils';
 
 import type { Loader } from 'astro/loaders';
 
-type RawTrack = Omit<Track, 'audioUrl' | 'category' | 'slug'>;
+interface RawTrack {
+    data: {
+        bpm: number;
+        duration: number;
+        keys: string[];
+        tempo: string;
+        title: string;
+        year: number;
+    };
+    flags: {
+        heart: boolean;
+        master: boolean;
+        mixdown: boolean;
+        star: boolean;
+    };
+}
 
 const CATEGORIES = ['music', 'productions', 'sessions'] as const;
 
@@ -24,6 +39,10 @@ function tracksLoader(): Loader {
     return {
         load: async ({ generateDigest, store, watcher }) => {
             const contentDir = 'src/content';
+            const peaksPath = path.join(contentDir, 'peaks.json');
+            const allPeaks: Record<string, number[]> = fs.existsSync(peaksPath)
+                ? JSON.parse(fs.readFileSync(peaksPath, 'utf-8'))
+                : {};
 
             store.clear();
 
@@ -37,48 +56,48 @@ function tracksLoader(): Loader {
 
                     const filePath = path.join(dir, file);
                     const raw: RawTrack = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-                    const slug = buildSlug(raw.id, raw.title);
+                    const id = file.replace('.json', '').toUpperCase();
+                    const slug = buildSlug(id, raw.data.title);
 
                     store.set({
                         data: {
                             audioUrl: `/audio/${slug}.mp3`,
-                            bpm: raw.bpm,
-                            category: categoryFromId(raw.id),
-                            duration: raw.duration,
-                            heart: raw.heart,
-                            key: raw.key,
-                            master: raw.master,
-                            mixdown: raw.mixdown,
-                            peaks: raw.peaks,
+                            category: categoryFromId(id),
+                            data: raw.data,
+                            flags: raw.flags,
+                            peaks: allPeaks[id] ?? [],
                             slug,
-                            star: raw.star,
-                            title: raw.title,
-                            year: raw.year,
                         },
                         digest: generateDigest(JSON.stringify(raw)),
                         filePath,
-                        id: raw.id,
+                        id,
                     });
                 }
             }
 
             watcher?.add(path.join(contentDir, '{music,productions,sessions}/**/*.json'));
+            watcher?.add(path.join(contentDir, 'peaks.json'));
         },
         name: 'tracks-loader',
         schema: z.object({
             audioUrl: z.string(),
-            bpm: z.array(z.string()),
             category: z.enum(CATEGORIES),
-            duration: z.number(),
-            heart: z.boolean(),
-            key: z.array(z.string()),
-            master: z.boolean(),
-            mixdown: z.boolean(),
+            data: z.object({
+                bpm: z.number(),
+                duration: z.number(),
+                keys: z.array(z.string()),
+                tempo: z.string(),
+                title: z.string(),
+                year: z.number(),
+            }),
+            flags: z.object({
+                heart: z.boolean(),
+                master: z.boolean(),
+                mixdown: z.boolean(),
+                star: z.boolean(),
+            }),
             peaks: z.array(z.number()),
             slug: z.string(),
-            star: z.boolean(),
-            title: z.string(),
-            year: z.number(),
         }),
     };
 }

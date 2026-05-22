@@ -38,7 +38,6 @@ Audit the web project against the checklist below. Skip paths in `.gitignore`.
 8. Decorative elements hidden from assistive technology
 9. Reduced motion respected via `prefers-reduced-motion`
 10. Page functional at 200% zoom
-11. Skip link to bypass navigation
 
 ## Performance
 

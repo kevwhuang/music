@@ -6,7 +6,7 @@ export function buildSlug(id: string, title: string): string {
         .replace(/\s+/g, '_');
 }
 
-export function categoryLabel(category: string): string {
+export function categoryLabel(category: Track['category']): string {
     return { music: 'Music', productions: 'Productions', sessions: 'Sessions' }[category] ?? category;
 }
 

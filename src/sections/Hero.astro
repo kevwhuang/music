@@ -3,10 +3,10 @@ const { tracks } = Astro.props as { tracks: Track[] };
 
 const TICKER = ['ideate', 'sample', 'synthesize', 'record', 'compose', 'arrange', 'produce', 'mix', 'master', 'publish'];
 
-const musicCount = tracks.filter(t => t.category === 'music').length;
-const productionsCount = tracks.filter(t => t.category === 'productions').length;
-const sessionsCount = tracks.filter(t => t.category === 'sessions').length;
-const starredCount = tracks.filter(t => t.star).length;
+const musicCount = tracks.filter(track => track.category === 'music').length;
+const productionsCount = tracks.filter(track => track.category === 'productions').length;
+const sessionsCount = tracks.filter(track => track.category === 'sessions').length;
+const starredCount = tracks.filter(track => track.flags.star).length;
 
 const stats = [
     { count: musicCount, label: 'MUSIC' },
@@ -18,17 +18,20 @@ const stats = [
 
 <section
     class="hero px-10 py-48 border-b border-zinc-800"
+    aria-label="Hero"
 >
     <div class="max-w-[80rem] mx-auto">
-        <h1 class="hero__title mb-16 font-semibold text-9xl tracking-[-0.045em] leading-none font-inter text-zinc-100" aria-label="aephonics from concept to master.">
+        <h1 class="hero__title mb-16 font-semibold text-9xl tracking-[-0.05em] leading-none font-inter text-zinc-100" aria-label="aephonics from concept to master.">
             <span class="hero__line opacity-0" aria-hidden="true">aephonics</span>
             <br />
             <span class="hero__line text-zinc-400 opacity-0" aria-hidden="true">from concept</span>
             <br />
             <span class="hero__line text-[var(--color-orange-80)] opacity-0" aria-hidden="true">to master.</span>
         </h1>
-        <p class="hero__subtitle max-w-[49rem] font-mono text-lg tracking-[0.18em] uppercase leading-relaxed text-zinc-300 opacity-0">
-            Producer and engineer. A decade of craft. 5M+ streams. Minimal setup. Maximum signal. Untethered from genre. Based in Austin. Open to inquiries.
+        <p class="hero__subtitle font-mono text-xl tracking-[0.2em] uppercase leading-relaxed text-zinc-300 opacity-0">
+            Producer and engineer. A decade of craft. 5M+ streams.<br />
+            Minimal setup. Maximum signal. Untethered from genre.<br />
+            Based in Austin. Open to collab.
         </p>
         <dl
             class="hero__stats relative grid grid-cols-4 gap-8 mt-24 p-7 border border-zinc-800 bg-zinc-800 opacity-0"
@@ -42,8 +45,8 @@ const stats = [
             </div>
             {stats.map(({ accent, count, label }, i) => (
                 <div class={`pl-[1.125rem] ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
-                    <dt class="mb-2.5 font-mono text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</dt>
-                    <dd class:list={['hero__stat-count font-medium text-[2.5rem] tracking-[-0.025em] leading-none font-inter', accent ? 'text-[var(--color-orange-80)]' : 'text-zinc-100']}>
+                    <dt class="mb-2.5 font-mono text-xs tracking-[0.2em] text-zinc-400">{label}</dt>
+                    <dd class:list={['hero__stat-count font-medium text-4xl tracking-[-0.025em] leading-none font-inter', accent ? 'text-[var(--color-orange-80)]' : 'text-zinc-100']}>
                         {count}
                     </dd>
                 </div>
@@ -79,30 +82,6 @@ const stats = [
         timeline.to(words[words.length - 1], { duration: SLIDE, ease: 'power2.in', x: -distance }, `+=${HOLD}`);
     }
 
-    function splitChars(el: HTMLElement): HTMLElement[] {
-        const text = el.textContent || '';
-        const chars: HTMLElement[] = [];
-
-        el.textContent = '';
-        gsap.set(el, { opacity: 1 });
-
-        for (const char of text) {
-            if (char === ' ') {
-                el.appendChild(document.createTextNode(' '));
-                continue;
-            }
-
-            const span = document.createElement('span');
-            span.textContent = char;
-            el.appendChild(span);
-            chars.push(span);
-        }
-
-        gsap.set(chars, { display: 'inline-block', opacity: 0, y: CHAR_Y });
-
-        return chars;
-    }
-
     function initHero(): void {
         const lines = document.querySelectorAll<HTMLElement>('.hero__line');
         const stats = document.querySelector<HTMLElement>('.hero__stats');
@@ -128,46 +107,71 @@ const stats = [
         }
 
         const chars = splitChars(lines[0]);
-        const master = gsap.timeline({ delay: TIMELINE_DELAY });
+        const timeline = gsap.timeline({ delay: TIMELINE_DELAY });
 
         gsap.set(lines[1], { y: LINE_Y });
         gsap.set(lines[2], { y: LINE_Y });
         gsap.set(stats, { y: SECTION_Y });
         gsap.set(subtitle, { y: SECTION_Y });
 
-        master.to(chars, {
+        timeline.to(chars, {
             duration: CHAR_DURATION,
             ease: 'power3.out',
             opacity: 1,
             stagger: CHAR_STAGGER,
             y: 0,
         });
-        master.to(lines[1], {
+        timeline.to(lines[1], {
             duration: LINE_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
-        master.to(lines[2], {
+        timeline.to(lines[2], {
             duration: LINE_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
-        master.to(subtitle, {
+        timeline.to(subtitle, {
             duration: SECTION_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
-        master.to(stats, {
+        timeline.to(stats, {
             duration: SECTION_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
-        master.call(() => cycle(distance, words));
+        timeline.call(() => cycle(distance, words), undefined, '<');
     }
 
+    function splitChars(element: HTMLElement): HTMLElement[] {
+        const text = element.textContent || '';
+        const chars: HTMLElement[] = [];
+
+        element.textContent = '';
+        gsap.set(element, { opacity: 1 });
+
+        for (const char of text) {
+            if (char === ' ') {
+                element.appendChild(document.createTextNode(' '));
+                continue;
+            }
+
+            const span = document.createElement('span');
+            span.textContent = char;
+            element.appendChild(span);
+            chars.push(span);
+        }
+
+        gsap.set(chars, { display: 'inline-block', opacity: 0, y: CHAR_Y });
+
+        return chars;
+    }
+
+    initHero();
     document.addEventListener('astro:page-load', initHero);
 </script>

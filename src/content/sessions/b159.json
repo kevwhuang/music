@@ -1,13 +1,16 @@
 {
-    "bpm": [],
-    "duration": 0,
-    "heart": false,
-    "id": "B159",
-    "key": [],
-    "master": false,
-    "mixdown": false,
-    "star": false,
-    "title": "",
-    "year": 2024,
-    "peaks": []
+    "data": {
+        "bpm": 0,
+        "duration": 0,
+        "keys": [],
+        "tempo": "",
+        "title": "",
+        "year": 2024
+    },
+    "flags": {
+        "heart": false,
+        "master": false,
+        "mixdown": false,
+        "star": false
+    }
 }

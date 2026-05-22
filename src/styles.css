@@ -69,8 +69,13 @@
     opacity: 0.4;
 }
 
+.catalog__grid {
+    grid-template-columns: 36px auto minmax(0, 1fr) auto auto;
+}
+
 .catalog__row {
-    grid-template-columns: 36px 70px minmax(0, 1fr) 80px 220px;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
 }
 
 .catalog__row--disabled {

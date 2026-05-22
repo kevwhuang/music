@@ -1,5 +1,5 @@
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Fragment, createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import gsap from 'gsap';
 
 import { CatalogRow } from '@components/CatalogRow';
@@ -24,11 +24,6 @@ interface FavoriteFilters {
     star: boolean;
 }
 
-interface PinModalActions {
-    close: () => void;
-    open: (track: Track, kind: 'master' | 'mixdown') => void;
-}
-
 interface PinModalTarget {
     kind: 'master' | 'mixdown';
     track: Track;
@@ -36,7 +31,7 @@ interface PinModalTarget {
 
 interface SortConfig {
     dir: 'asc' | 'desc';
-    field: string;
+    field: 'bpm' | 'duration' | 'id' | 'key' | 'title' | 'year';
 }
 
 const BPM_MAX = 180;
@@ -52,11 +47,13 @@ const SORT_FALLBACK = 9999;
 
 const PinModalContext = createContext<PinModalActions | null>(null);
 
+gsap.registerPlugin(ScrollTrigger);
+
 function allKeys(tracks: Track[]): string[] {
     const keys = new Set<string>();
 
     for (const track of tracks) {
-        for (const key of track.key) {
+        for (const key of track.data.keys) {
             keys.add(key);
         }
     }
@@ -68,49 +65,157 @@ function allYears(tracks: Track[]): number[] {
     const years = new Set<number>();
 
     for (const track of tracks) {
-        years.add(track.year);
+        years.add(track.data.year);
     }
 
     return [...years].sort((a, b) => a - b);
 }
 
-function parseBpm(bpm: string[]): number | null {
-    const value = parseInt(bpm[0], 10);
-    return Number.isFinite(value) ? value : null;
+function usePinModal() {
+    return useContext(PinModalContext)!;
+}
+
+function useTrackList(tracks: Track[]) {
+    const [bpmRange, setBpmRange] = useState<[number, number]>([BPM_MIN, BPM_MAX]);
+    const [categories, setCategories] = useState<CategoryFilters>({ music: true, productions: true, sessions: true });
+    const [favorites, setFavorites] = useState<FavoriteFilters>({ heart: false, star: false });
+    const [keys, setKeys] = useState<string[]>([]);
+    const [page, setPage] = useState(0);
+    const [query, setQuery] = useState('');
+    const [sort, setSort] = useState<SortConfig>({ dir: 'asc', field: 'id' });
+    const [years, setYears] = useState<number[]>([]);
+
+    const filtered = useMemo(() => {
+        let results = tracks.filter(track => categories[track.category]);
+
+        if (query.trim()) {
+            const needle = query.trim().toLowerCase();
+            results = results.filter(track =>
+                (track.data.title || '').toLowerCase().includes(needle)
+                || track.id.toLowerCase().includes(needle),
+            );
+        }
+
+        if (years.length) {
+            results = results.filter(track => years.includes(track.data.year));
+        }
+
+        if (keys.length) {
+            results = results.filter(track => track.data.keys.some(k => keys.includes(k)));
+        }
+
+        if (favorites.star && favorites.heart) {
+            results = results.filter(track => track.flags.star || track.flags.heart);
+        } else if (favorites.star) {
+            results = results.filter(track => track.flags.star);
+        } else if (favorites.heart) {
+            results = results.filter(track => track.flags.heart);
+        }
+
+        results = results.filter((track) => {
+            if (track.data.bpm === 0) {
+                return bpmRange[0] === BPM_MIN && bpmRange[1] === BPM_MAX;
+            }
+
+            return track.data.bpm >= bpmRange[0] && track.data.bpm <= bpmRange[1];
+        });
+
+        const direction = sort.dir === 'asc' ? 1 : -1;
+
+        results = [...results].sort((a, b) => {
+            let valA: string | number;
+            let valB: string | number;
+
+            if (sort.field === 'title') {
+                valA = (a.data.title || '~~~').toLowerCase();
+                valB = (b.data.title || '~~~').toLowerCase();
+            } else if (sort.field === 'year') {
+                valA = a.data.year;
+                valB = b.data.year;
+            } else if (sort.field === 'duration') {
+                valA = a.data.duration;
+                valB = b.data.duration;
+            } else if (sort.field === 'bpm') {
+                valA = a.data.bpm || SORT_FALLBACK;
+                valB = b.data.bpm || SORT_FALLBACK;
+            } else if (sort.field === 'key') {
+                valA = (a.data.keys[0]) || '~~~';
+                valB = (b.data.keys[0]) || '~~~';
+            } else {
+                valA = a.id;
+                valB = b.id;
+            }
+
+            if (valA < valB) return -direction;
+            if (valA > valB) return direction;
+            return 0;
+        });
+
+        return results;
+    }, [bpmRange, categories, favorites, keys, query, sort, tracks, years]);
+
+    useEffect(() => setPage(0), [bpmRange, categories, favorites, keys, query, sort, years]);
+
+    const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+    return {
+        PAGE_SIZE,
+        bpmRange,
+        categories,
+        favorites,
+        keys,
+        page,
+        pageCount,
+        query,
+        setBpmRange,
+        setCategories,
+        setFavorites,
+        setKeys,
+        setPage,
+        setQuery,
+        setSort,
+        setYears,
+        sort,
+        total: filtered.length,
+        visible,
+        years,
+    };
 }
 
 function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v: [number, number]) => void }) {
-    const [lo, hi] = value;
+    const [low, high] = value;
     const trackRef = useRef<HTMLDivElement>(null);
-    const onDrag = (which: 'lo' | 'hi') => (e: React.MouseEvent) => {
+    const handleDrag = (which: 'lo' | 'hi') => (e: React.PointerEvent) => {
         e.preventDefault();
-        const move = (ev: MouseEvent) => {
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        const move = (ev: PointerEvent) => {
             if (!trackRef.current) return;
             const rect = trackRef.current.getBoundingClientRect();
             const ratio = (ev.clientX - rect.left) / rect.width;
             const bpm = Math.round(BPM_MIN + Math.max(0, Math.min(1, ratio)) * (BPM_MAX - BPM_MIN));
-            if (which === 'lo') onChange([Math.min(bpm, hi - 1), hi]);
-            else onChange([lo, Math.max(bpm, lo + 1)]);
+            if (which === 'lo') onChange([Math.min(bpm, high - 1), high]);
+            else onChange([low, Math.max(bpm, low + 1)]);
         };
         const up = () => {
-            window.removeEventListener('mousemove', move);
-            window.removeEventListener('mouseup', up);
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', up);
         };
-        window.addEventListener('mousemove', move);
-        window.addEventListener('mouseup', up);
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
     };
-    const percentLow = ((lo - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
-    const percentHigh = ((hi - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
-    const isDefault = lo === BPM_MIN && hi === BPM_MAX;
+    const percentLow = ((low - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
+    const percentHigh = ((high - BPM_MIN) / (BPM_MAX - BPM_MIN)) * 100;
+    const isDefault = low === BPM_MIN && high === BPM_MAX;
 
     return (
         <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between text-[0.6875rem] tracking-[0.22em] text-zinc-400">
+            <div className="flex items-center justify-between text-xs tracking-[0.2em] text-zinc-400">
                 <span>BPM</span>
                 <span className="tracking-[0.04em] tabular-nums" style={{ color: isDefault ? 'var(--color-white-60)' : 'var(--color-orange-80)' }}>
-                    {lo}
+                    {low}
                     –
-                    {hi}
+                    {high}
                 </span>
             </div>
             <div className="relative flex items-center h-11">
@@ -122,20 +227,20 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
                             aria-label={`BPM ${k === 'lo' ? 'minimum' : 'maximum'}`}
                             aria-valuemax={BPM_MAX}
                             aria-valuemin={BPM_MIN}
-                            aria-valuenow={k === 'lo' ? lo : hi}
+                            aria-valuenow={k === 'lo' ? low : high}
                             key={k}
                             onKeyDown={(e) => {
                                 if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-                                    if (k === 'lo') onChange([Math.max(BPM_MIN, lo - 1), hi]);
-                                    else onChange([lo, Math.max(lo + 1, hi - 1)]);
+                                    if (k === 'lo') onChange([Math.max(BPM_MIN, low - 1), high]);
+                                    else onChange([low, Math.max(low + 1, high - 1)]);
                                 } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-                                    if (k === 'lo') onChange([Math.min(hi - 1, lo + 1), hi]);
-                                    else onChange([lo, Math.min(BPM_MAX, hi + 1)]);
+                                    if (k === 'lo') onChange([Math.min(high - 1, low + 1), high]);
+                                    else onChange([low, Math.min(BPM_MAX, high + 1)]);
                                 }
                             }}
-                            onMouseDown={onDrag(k)}
+                            onPointerDown={handleDrag(k)}
                             role="slider"
-                            style={{ boxShadow: '0 2px 4px var(--color-black-40)', left: `${p}%`, transform: 'translate(-50%, -50%)' }}
+                            style={{ boxShadow: '0 2px 4px var(--color-black-40)', left: `${p}%`, touchAction: 'none', transform: 'translate(-50%, -50%)' }}
                             tabIndex={0}
                         />
                     ))}
@@ -146,8 +251,8 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
 }
 
 function CatalogInner({ tracks }: { tracks: Track[] }) {
-    const list = useTrackList(tracks);
-    const pin = usePinModal();
+    const trackList = useTrackList(tracks);
+    const pinModal = usePinModal();
     const player = usePlayer();
     const sectionRef = useRef<HTMLElement>(null);
 
@@ -163,60 +268,60 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
         });
     }, []);
 
-    const setPage = (p: number) => {
-        if (p === list.page) return;
-        list.setPage(p);
+    const handlePageChange = (p: number) => {
+        if (p === trackList.page) return;
+        trackList.setPage(p);
         sectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     return (
-        <section className="px-10 py-48 font-mono text-sm" ref={sectionRef}>
+        <section className="px-10 py-48 font-mono text-base" aria-label="Catalog" ref={sectionRef}>
             <div className="max-w-[92.5rem] mx-auto">
                 <div className="flex items-baseline justify-between gap-6 px-5 mb-8">
                     <h2 className="catalog__heading m-0 font-medium font-inter text-4xl tracking-[-0.025em]">
                         Catalog
                     </h2>
-                    <span className="font-mono text-xl tracking-[0.02em] text-zinc-400">
-                        {list.total}
+                    <span className="font-mono text-xl tracking-[0.02em] text-zinc-400" aria-live="polite">
+                        {trackList.total}
                         {' of '}
                         {tracks.length}
                     </span>
                 </div>
-                <Filters list={list} tracks={tracks} />
-                <div aria-label="Track catalog" role="grid">
-                    <div className="catalog__row grid items-center gap-5 px-5 py-3.5 mt-6 border border-zinc-800 text-[0.6875rem] tracking-[0.22em] bg-zinc-900 text-zinc-400" role="row">
-                        <span role="columnheader" />
-                        <SortHeader field="id" label="ID" list={list} />
-                        <SortHeader field="title" label="TITLE" list={list} />
-                        <SortHeader align="right" field="duration" label="LENGTH" list={list} />
-                        <span className="pl-4 text-left" role="columnheader">DOWNLOAD</span>
+                <Filters list={trackList} tracks={tracks} />
+                <div className="catalog__grid grid" aria-label="Track catalog" role="list">
+                    <div className="catalog__row grid items-center gap-6 px-5 py-3.5 mt-6 border border-zinc-800 text-xs tracking-[0.2em] bg-zinc-900 text-zinc-400">
+                        <span />
+                        <SortHeader field="id" label="ID" list={trackList} />
+                        <SortHeader field="title" label="TITLE" list={trackList} />
+                        <SortHeader align="right" field="duration" label="LENGTH" list={trackList} />
+                        <span className="pl-4 text-left">DOWNLOAD</span>
                     </div>
-                    <div className="catalog__body border border-zinc-800 border-t-0" role="rowgroup">
-                        {list.visible.length === 0 && (
-                            <div className="p-20 text-center text-sm text-zinc-400">
+                    <div className="catalog__body grid grid-cols-subgrid col-span-full border border-zinc-800 border-t-0">
+                        {trackList.visible.length === 0 && (
+                            <div className="col-span-full p-20 text-center text-base text-zinc-400" aria-live="polite" role="status">
                                 No tracks match the current filters.
                             </div>
                         )}
-                        {list.visible.length > 0 && list.visible.map((t, i) => (
-                            <CatalogRow key={t.id} idx={i} isActive={player.trackId === t.id} isPlaying={player.trackId === t.id && player.playing} pin={pin} t={t} />
+                        {trackList.visible.length > 0 && trackList.visible.map((track, i) => (
+                            <CatalogRow key={track.id} index={i} isActive={player.trackId === track.id} isPlaying={player.trackId === track.id && player.playing} pinModal={pinModal} track={track} />
                         ))}
                     </div>
                 </div>
-                <Pagination list={list} setPage={setPage} />
+                <Pagination list={trackList} setPage={handlePageChange} />
             </div>
         </section>
     );
 }
 
 function DownloadChip({ children, kind }: {
-    children: React.ReactNode; kind: string;
+    children: React.ReactNode; kind: 'master' | 'mixdown';
 }) {
     return (
-        <div className="px-3 py-2.5 rounded-sm border border-zinc-700 text-[0.6875rem]">
-            <div className="mb-1 tracking-[0.18em] text-zinc-400">
+        <div className="px-3 py-2.5 rounded-sm border border-zinc-700 text-xs">
+            <div className="mb-1 tracking-[0.2em] text-zinc-400">
                 {kind === 'master' ? 'MASTER' : 'MIXDOWN'}
             </div>
-            <div className="text-zinc-100 break-all leading-[1.3]">
+            <div className="text-zinc-100 break-all leading-tight">
                 {children}
             </div>
         </div>
@@ -228,7 +333,7 @@ function FavoriteChip({ active, color, icon, label, onClick }: {
 }) {
     return (
         <button
-            className={`catalog__favorite flex items-center justify-center w-11 h-11 rounded-sm border transition-[background,border-color,color] duration-150 cursor-pointer ${active ? '' : 'border-[var(--color-white-20)]'}`}
+            className={`catalog__favorite flex items-center justify-center w-9 h-9 rounded-sm border transition-[background,border-color,color] duration-150 cursor-pointer ${active ? '' : 'border-[var(--color-white-20)]'}`}
             aria-label={label}
             aria-pressed={active}
             onClick={onClick}
@@ -247,10 +352,10 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
     return (
         <div className="flex flex-col gap-5 p-7 rounded-sm border border-zinc-800 bg-zinc-800">
             <div className="flex items-center gap-3.5">
-                <div className="flex flex-1 items-center gap-3 px-4 py-3 rounded-sm border border-transparent bg-zinc-900 transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus-within:border-[var(--color-orange-80)]">
+                <div className="flex flex-1 items-center gap-3 px-4 py-2.5 rounded-sm border border-transparent bg-zinc-900 transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus-within:border-[var(--color-orange-80)]">
                     <SearchIcon />
                     <input
-                        className="catalog__search flex-1 border-none text-sm [font-family:inherit] bg-transparent text-zinc-100 outline-none"
+                        className="catalog__search flex-1 border-none font-sans text-base bg-transparent text-zinc-100 outline-none"
                         aria-label="Search by title or ID"
                         maxLength={100}
                         onChange={e => list.setQuery(e.target.value)}
@@ -266,7 +371,7 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     />
                     {list.query && (
                         <button
-                            className="border-none text-[0.8125rem] [font-family:inherit] bg-none text-zinc-400 hover:opacity-80 active:opacity-70 cursor-pointer"
+                            className="border-none text-sm font-mono bg-none text-zinc-400 hover:opacity-80 active:opacity-70 cursor-pointer"
                             aria-label="Clear search"
                             onClick={() => list.setQuery('')}
                         >
@@ -279,9 +384,9 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                         <Fragment key={c}>
                             {i > 0 && <div className="w-px my-2 bg-zinc-700" />}
                             <button
-                                className={`catalog__category ${list.cats[c] ? 'catalog__category--active' : 'text-zinc-400'} px-[1.125rem] py-3 border-0 text-xs tracking-[0.16em] [font-family:inherit] transition-[background,color,opacity] duration-150 cursor-pointer`}
-                                aria-pressed={list.cats[c]}
-                                onClick={() => list.setCats({ ...list.cats, [c]: !list.cats[c] })}
+                                className={`catalog__category ${list.categories[c] ? 'catalog__category--active' : 'text-zinc-400'} px-4 py-2.5 border-0 text-sm tracking-[0.2em] font-mono transition-[background,color,opacity] duration-150 cursor-pointer`}
+                                aria-pressed={list.categories[c]}
+                                onClick={() => list.setCategories({ ...list.categories, [c]: !list.categories[c] })}
                             >
                                 {categoryLabel(c).toUpperCase()}
                             </button>
@@ -289,11 +394,11 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     ))}
                 </div>
                 <div className="flex gap-2">
-                    <FavoriteChip active={list.favs.star} color="var(--color-gold)" icon={<StarIcon />} label="Starred only" onClick={() => list.setFavs({ ...list.favs, star: !list.favs.star })} />
-                    <FavoriteChip active={list.favs.heart} color="var(--color-rose)" icon={<HeartIcon />} label="Hearted only" onClick={() => list.setFavs({ ...list.favs, heart: !list.favs.heart })} />
+                    <FavoriteChip active={list.favorites.star} color="var(--color-gold)" icon={<StarIcon />} label="Starred only" onClick={() => list.setFavorites({ ...list.favorites, star: !list.favorites.star })} />
+                    <FavoriteChip active={list.favorites.heart} color="var(--color-rose)" icon={<HeartIcon />} label="Hearted only" onClick={() => list.setFavorites({ ...list.favorites, heart: !list.favorites.heart })} />
                 </div>
             </div>
-            <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-[1.125rem]">
+            <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-4">
                 <MultiSelect label="YEAR" options={allYears(tracks).map(y => [y, String(y)] as [number, string])} placeholder="All" selected={list.years} onChange={list.setYears} />
                 <MultiSelect label="KEY" options={allKeys(tracks).map(k => [k, k] as [string, string])} placeholder="All" selected={list.keys} onChange={list.setKeys} />
                 <BPMSlider value={list.bpmRange} onChange={list.setBpmRange} />
@@ -333,14 +438,14 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
 
     return (
         <div className="relative flex flex-col gap-2" ref={ref}>
-            <span className="text-[0.6875rem] tracking-[0.22em] text-zinc-400">{label}</span>
+            <span className="text-xs tracking-[0.2em] text-zinc-400">{label}</span>
             <button
-                className={`flex items-center justify-between px-3.5 py-[11px] rounded-sm border text-sm text-left [font-family:inherit] bg-zinc-900 transition-[border-color] duration-150 focus-visible:outline-none active:opacity-70 cursor-pointer ${open ? 'border-[var(--color-orange-80)]' : 'border-transparent hover:border-[var(--color-orange-80)]'}`}
+                className={`flex items-center justify-between px-3.5 py-2.5 rounded-sm border font-sans text-base text-left bg-zinc-900 transition-[border-color] duration-150 focus-visible:outline-none active:opacity-70 cursor-pointer ${open ? 'border-[var(--color-orange-80)]' : 'border-transparent hover:border-[var(--color-orange-80)]'}`}
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={`${label} filter`}
                 onClick={() => setOpen(!open)}
-                style={{ color: selected.length ? 'var(--color-white)' : 'var(--color-white-40)' }}
+                style={{ color: selected.length ? 'var(--color-white)' : 'var(--color-white-60)' }}
             >
                 <span className="truncate">{summary}</span>
                 <ChevronIcon open={open} />
@@ -356,21 +461,21 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
     const [search, setSearch] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
     const filtered = options.filter(([, l]) => !search || l.toLowerCase().includes(search.toLowerCase()));
-    const toggle = (v: T) => {
+    const toggleSelection = (v: T) => {
         if (selected.includes(v)) onChange(selected.filter(s => s !== v));
         else onChange([...selected, v]);
     };
 
     return (
         <div className="catalog__dropdown absolute top-[calc(100%+4px)] left-0 right-0 flex flex-col z-50 rounded-sm border border-zinc-700 bg-zinc-800">
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-zinc-700">
-                <span className="flex-1 text-[0.625rem] tracking-[0.22em] text-zinc-400">
+            <div className="flex items-center gap-2 px-3 py-2.5">
+                <span className="flex-1 text-xs tracking-[0.2em] text-zinc-400">
                     {selected.length}
                     {' '}
                     selected
                 </span>
                 <button
-                    className="border-none text-[0.6875rem] tracking-[0.16em] [font-family:inherit] bg-transparent hover:opacity-80 active:opacity-70 cursor-pointer"
+                    className="border-none text-xs tracking-[0.2em] font-mono bg-transparent hover:opacity-80 active:opacity-70 cursor-pointer"
                     disabled={!selected.length}
                     onClick={() => onChange([])}
                     style={{ color: selected.length ? 'var(--color-orange-80)' : 'var(--color-white-40)' }}
@@ -379,7 +484,8 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                 </button>
             </div>
             <input
-                className="catalog__dropdown-input px-4 py-3 rounded-sm border border-zinc-700 text-[0.8125rem] [font-family:inherit] bg-zinc-900 text-zinc-100 outline-none focus-visible:outline-none transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus:border-[var(--color-orange-80)]"
+                className="catalog__dropdown-input px-4 py-2.5 rounded-sm border border-zinc-700 font-sans text-sm bg-zinc-900 text-zinc-100 outline-none focus-visible:outline-none transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus:border-[var(--color-orange-80)]"
+                aria-label="Filter options"
                 maxLength={20}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Filter"
@@ -389,7 +495,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
             />
             <ul className="max-h-[400px] p-1.5 overflow-y-auto list-none m-0" role="listbox">
                 {filtered.length === 0 && (
-                    <li className="p-4 text-center text-zinc-400 text-xs">No matches.</li>
+                    <li className="p-4 text-center text-zinc-400 text-sm">No matches.</li>
                 )}
                 {filtered.length > 0 && filtered.map(([v, l]) => {
                     const isSelected = selected.includes(v);
@@ -401,13 +507,13 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                             role="option"
                         >
                             <label
-                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-[0.8125rem] cursor-pointer"
+                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-sm cursor-pointer"
                                 onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
                                 onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
                                 style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
                             >
                                 <span
-                                    className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-[0.625rem] text-white"
+                                    className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-xs text-white"
                                     style={{
                                         background: isSelected ? 'var(--color-orange-80)' : 'var(--color-transparent)',
                                         border: `1px solid ${isSelected ? 'var(--color-orange-80)' : 'var(--color-zinc-500)'}`,
@@ -418,7 +524,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                                 <input
                                     className="hidden"
                                     checked={isSelected}
-                                    onChange={() => toggle(v)}
+                                    onChange={() => toggleSelection(v)}
                                     type="checkbox"
                                 />
                                 <span>{l}</span>
@@ -431,12 +537,13 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
     );
 }
 
-function PageButton({ children, active, disabled, onClick }: {
-    active?: boolean; children: React.ReactNode; disabled?: boolean; onClick: () => void;
+function PageButton({ children, active, disabled, label, onClick }: {
+    active?: boolean; children: React.ReactNode; disabled?: boolean; label: string; onClick: () => void;
 }) {
     return (
         <button
-            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-[13px] py-2 rounded-sm border border-zinc-700 font-medium text-xs [font-family:inherit] bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} transition-[background,border-color,color,opacity] duration-150 ${!active && !disabled ? 'cursor-pointer' : ''}`}
+            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-3 py-2 rounded-sm border border-zinc-700 font-medium text-sm font-mono bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} transition-[background,border-color,color,opacity] duration-150 ${!active && !disabled ? 'cursor-pointer' : ''}`}
+            aria-label={label}
             disabled={disabled}
             onClick={onClick}
         >
@@ -448,31 +555,32 @@ function PageButton({ children, active, disabled, onClick }: {
 function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: number) => void }) {
     const showPages: (number | '…')[] = [];
     const total = list.pageCount;
+
     for (let i = 0; i < total; i++) {
         if (i === 0 || i === total - 1 || Math.abs(i - list.page) <= PAGE_ADJACENT) showPages.push(i);
         else if (showPages[showPages.length - 1] !== '…') showPages.push('…');
     }
 
     return (
-        <div className="flex items-center justify-between px-5 mt-7 text-xs tracking-[0.16em]">
+        <div className="flex items-center justify-between px-5 mt-7 text-sm tracking-[0.2em]">
             <span className="text-zinc-400">
                 {list.total === 0 ? '0' : `${list.page * list.PAGE_SIZE + 1}–${Math.min((list.page + 1) * list.PAGE_SIZE, list.total)}`}
                 {' OF '}
                 {list.total}
             </span>
             <div className="flex gap-1">
-                <PageButton disabled={list.page === 0} onClick={() => setPage(Math.max(0, list.page - 1))}><span className="text-base leading-none">‹</span></PageButton>
+                <PageButton disabled={list.page === 0} label="Previous page" onClick={() => setPage(Math.max(0, list.page - 1))}><span className="text-base leading-none">‹</span></PageButton>
                 {showPages.map((p, i) => {
                     if (p === '…') return <span className="px-2.5 py-2 text-zinc-500" key={`e${i}`}>…</span>;
-                    return <PageButton key={p} active={p === list.page} onClick={() => setPage(p)}>{p + 1}</PageButton>;
+                    return <PageButton key={p} active={p === list.page} label={`Page ${p + 1}`} onClick={() => setPage(p)}>{p + 1}</PageButton>;
                 })}
-                <PageButton disabled={list.page === list.pageCount - 1} onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}><span className="text-base leading-none">›</span></PageButton>
+                <PageButton disabled={list.page === list.pageCount - 1} label="Next page" onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}><span className="text-base leading-none">›</span></PageButton>
             </div>
         </div>
     );
 }
 
-function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }: {
+function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }: {
     close: () => void;
     inputRef: React.RefObject<HTMLInputElement | null>;
     pin: string;
@@ -484,7 +592,7 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
     const formRef = useRef<HTMLFormElement>(null);
     const pinInputId = useId();
     const titleId = useId();
-    const slug = buildSlug(target.track.id, target.track.title);
+    const slug = buildSlug(target.track.id, target.track.data.title);
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
@@ -530,11 +638,11 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                 onSubmit={submit}
                 ref={formRef}
             >
-                <div id={titleId} className="mb-1 font-medium text-[1.375rem] tracking-[-0.01em]">
-                    {target.track.title || '(untitled)'}
+                <div id={titleId} className="mb-1 font-medium text-2xl tracking-[-0.01em]">
+                    {target.track.data.title || '(untitled)'}
                 </div>
-                <div className="mb-6 text-[0.6875rem] tracking-[0.2em] text-zinc-400">
-                    {`${categoryLabel(target.track.category).toUpperCase()} · ${target.track.id} · ${target.track.year} · BPM ${target.track.bpm.join(' ')} · ${target.track.key.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}`}
+                <div className="mb-6 text-xs tracking-[0.2em] text-zinc-400">
+                    {`${categoryLabel(target.track.category).toUpperCase()} · ${target.track.id} · ${target.track.data.year}${target.track.data.bpm > 0 ? ` · BPM ${target.track.data.bpm}${target.track.data.tempo ? ` ${target.track.data.tempo}` : ''}` : ''} · ${target.track.data.keys.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}`}
                 </div>
                 <div className="mb-5">
                     <DownloadChip kind={target.kind}>
@@ -542,14 +650,14 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                     </DownloadChip>
                 </div>
                 <label
-                    className="block mb-2 text-[0.6875rem] tracking-[0.18em] text-zinc-400"
+                    className="block mb-2 text-xs tracking-[0.2em] text-zinc-400"
                     htmlFor={pinInputId}
                 >
                     AUTHORIZATION
                 </label>
                 <input
                     id={pinInputId}
-                    className={`modal__input ${state === 'error' ? 'modal__input--error' : ''} w-full px-4 py-3.5 rounded-none font-mono text-[1.375rem] tracking-[0.5em] transition-[border-color,box-shadow] duration-150`}
+                    className={`modal__input ${state === 'error' ? 'modal__input--error' : ''} w-full px-4 py-3.5 rounded-none font-mono text-2xl tracking-[0.5em] transition-[border-color,box-shadow] duration-150`}
                     autoComplete="off"
                     maxLength={6}
                     onChange={e => setPin(e.target.value)}
@@ -558,15 +666,15 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                     type="password"
                     value={pin}
                 />
-                <div className="min-h-[18px] mt-2 text-[0.6875rem]" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
+                <div className="min-h-5 mt-2 text-xs" aria-live="polite" role="status" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
                     {state === 'error' && 'Invalid pin.'}
-                    {state === 'success' && '✓ Verified — generating signed url'}
+                    {state === 'success' && 'Downloading…'}
                     {state === 'idle' && ' '}
                     {state === 'checking' && 'Verifying…'}
                 </div>
                 <div className="flex gap-2 mt-5">
                     <button
-                        className={`flex-[2] px-4 py-3 border-none font-medium text-xs tracking-[0.18em] [font-family:inherit] text-white transition-[background,opacity] duration-150 hover:opacity-90 active:opacity-70 ${state === 'checking' ? 'opacity-60' : ''}`}
+                        className={`flex-[2] px-4 py-2.5 border-none font-medium text-sm tracking-[0.2em] font-mono text-white transition-[background,opacity] duration-150 hover:opacity-90 active:opacity-70 ${state === 'checking' ? 'opacity-60' : ''}`}
                         disabled={state === 'checking' || state === 'success'}
                         style={{
                             background: state === 'success' ? 'var(--color-sage-40)' : 'var(--color-orange-80)',
@@ -577,7 +685,7 @@ function PinModalChrome({ close, inputRef, pin, setPin, state, submit, target }:
                         {state === 'success' ? '✓ DOWNLOAD READY' : state === 'checking' ? 'VERIFYING…' : 'DOWNLOAD'}
                     </button>
                     <button
-                        className="flex-1 px-4 py-3 border border-zinc-700 text-xs tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 hover:bg-[var(--color-white-20)] hover:border-[var(--color-orange-80)] hover:text-[var(--color-orange-80)] active:opacity-70 cursor-pointer"
+                        className="flex-1 px-4 py-2.5 border border-zinc-700 text-sm tracking-[0.2em] font-mono bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 hover:bg-[var(--color-white-20)] hover:border-[var(--color-orange-80)] hover:text-[var(--color-orange-80)] active:opacity-70 cursor-pointer"
                         onClick={close}
                         type="button"
                     >
@@ -624,7 +732,7 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         return () => window.removeEventListener('keydown', onKey);
     }, [target, close]);
 
-    const submit = (e?: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
         e?.preventDefault();
         setState('checking');
         setTimeout(() => {
@@ -641,13 +749,13 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         <PinModalContext.Provider value={{ close, open }}>
             {children}
             {target && (
-                <PinModalChrome
+                <PinModalDialog
                     close={close}
                     inputRef={inputRef}
                     pin={pin}
                     setPin={setPin}
                     state={state}
-                    submit={submit}
+                    submit={handleSubmit}
                     target={target}
                 />
             )}
@@ -655,13 +763,14 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     );
 }
 
-function SortHeader({ align, field, label, list }: { align?: 'right'; field: string; label: string; list: TrackListState }) {
+function SortHeader({ align, field, label, list }: { align?: 'right'; field: SortConfig['field']; label: string; list: TrackListState }) {
     const active = list.sort.field === field;
 
     return (
-        <span className={align === 'right' ? 'text-right' : ''} aria-sort={active ? (list.sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} role="columnheader">
+        <span className={align === 'right' ? 'text-right' : ''}>
             <button
-                className={`catalog__sort ${active ? 'catalog__sort--active' : ''} inline-flex items-center gap-[5px] border-none bg-transparent [font-family:inherit] transition-[color] duration-150 cursor-pointer ${active ? '' : 'text-zinc-400'}`}
+                className={`catalog__sort ${active ? 'catalog__sort--active' : ''} inline-flex items-center gap-[5px] border-none bg-transparent font-mono transition-[color] duration-150 cursor-pointer ${active ? '' : 'text-zinc-400'}`}
+                aria-label={active ? `Sort by ${label.toLowerCase()}, ${list.sort.dir === 'asc' ? 'ascending' : 'descending'}` : `Sort by ${label.toLowerCase()}`}
                 onClick={() => {
                     if (list.sort.field !== field) list.setSort({ dir: 'asc', field });
                     else if (list.sort.dir === 'asc') list.setSort({ dir: 'desc', field });
@@ -670,129 +779,12 @@ function SortHeader({ align, field, label, list }: { align?: 'right'; field: str
             >
                 {label}
                 {active && (
-                    <span className="text-[0.6rem] leading-none">{list.sort.dir === 'asc' ? '▲' : '▼'}</span>
+                    <span className="text-xs leading-none">{list.sort.dir === 'asc' ? '▲' : '▼'}</span>
                 )}
             </button>
         </span>
     );
 }
-
-function usePinModal() {
-    return useContext(PinModalContext)!;
-}
-
-function useTrackList(tracks: Track[]) {
-    const [bpmRange, setBpmRange] = useState<[number, number]>([BPM_MIN, BPM_MAX]);
-    const [cats, setCats] = useState<CategoryFilters>({ music: true, productions: true, sessions: true });
-    const [favs, setFavs] = useState<FavoriteFilters>({ heart: false, star: false });
-    const [keys, setKeys] = useState<string[]>([]);
-    const [page, setPage] = useState(0);
-    const [query, setQuery] = useState('');
-    const [sort, setSort] = useState<SortConfig>({ dir: 'asc', field: 'id' });
-    const [years, setYears] = useState<number[]>([]);
-
-    const filtered = useMemo(() => {
-        let results = tracks.filter(t => cats[t.category]);
-
-        if (query.trim()) {
-            const needle = query.trim().toLowerCase();
-            results = results.filter(t =>
-                (t.title || '').toLowerCase().includes(needle)
-                || t.id.toLowerCase().includes(needle),
-            );
-        }
-
-        if (years.length) {
-            results = results.filter(t => years.includes(t.year));
-        }
-
-        if (keys.length) {
-            results = results.filter(t => t.key.some(k => keys.includes(k)));
-        }
-
-        if (favs.star && favs.heart) {
-            results = results.filter(t => t.star || t.heart);
-        } else if (favs.star) {
-            results = results.filter(t => t.star);
-        } else if (favs.heart) {
-            results = results.filter(t => t.heart);
-        }
-
-        results = results.filter((t) => {
-            const value = parseBpm(t.bpm);
-
-            if (value === null) {
-                return bpmRange[0] === BPM_MIN && bpmRange[1] === BPM_MAX;
-            }
-
-            return value >= bpmRange[0] && value <= bpmRange[1];
-        });
-
-        const direction = sort.dir === 'asc' ? 1 : -1;
-
-        results = [...results].sort((a, b) => {
-            let valA: string | number;
-            let valB: string | number;
-
-            if (sort.field === 'title') {
-                valA = (a.title || '~~~').toLowerCase();
-                valB = (b.title || '~~~').toLowerCase();
-            } else if (sort.field === 'year') {
-                valA = a.year;
-                valB = b.year;
-            } else if (sort.field === 'duration') {
-                valA = a.duration;
-                valB = b.duration;
-            } else if (sort.field === 'bpm') {
-                valA = parseBpm(a.bpm) ?? SORT_FALLBACK;
-                valB = parseBpm(b.bpm) ?? SORT_FALLBACK;
-            } else if (sort.field === 'key') {
-                valA = (a.key[0]) || '~~~';
-                valB = (b.key[0]) || '~~~';
-            } else {
-                valA = a.id;
-                valB = b.id;
-            }
-
-            if (valA < valB) return -direction;
-            if (valA > valB) return direction;
-            return 0;
-        });
-
-        return results;
-    }, [bpmRange, cats, favs, keys, query, sort, tracks, years]);
-
-    useEffect(() => setPage(0), [bpmRange, cats, favs, keys, query, sort, years]);
-
-    const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-    const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-
-    return {
-        PAGE_SIZE,
-        bpmRange,
-        cats,
-        favs,
-        filtered,
-        keys,
-        page,
-        pageCount,
-        query,
-        setBpmRange,
-        setCats,
-        setFavs,
-        setKeys,
-        setPage,
-        setQuery,
-        setSort,
-        setYears,
-        sort,
-        total: filtered.length,
-        visible,
-        years,
-    };
-}
-
-gsap.registerPlugin(ScrollTrigger);
 
 export default function Catalog({ tracks }: { tracks: Track[] }) {
     return (

@@ -1,6 +1,6 @@
 {
     "name": "music",
-    "version": "26.5.21",
+    "version": "26.5.22",
     "type": "module",
     "author": "Kevin Huang",
     "scripts": {
@@ -17,9 +17,10 @@
         "@fontsource/geist-sans": "^5.2.5",
         "@fontsource/ibm-plex-mono": "^5.2.7",
         "@fontsource/inter": "^5.2.8",
+        "@netlify/blobs": "^10.7.8",
         "@supabase/supabase-js": "^2.106.1",
         "@tailwindcss/vite": "^4.3.0",
-        "astro": "^6.3.6",
+        "astro": "^6.3.7",
         "astro-robots-txt": "^1.0.0",
         "gsap": "^3.15.0",
         "react": "^19.2.6",

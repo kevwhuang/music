@@ -10,6 +10,15 @@ const entries = await getCollection('tracks');
 const tracks = entries
     .map(entry => ({ ...entry.data, id: entry.id }))
     .sort((a, b) => a.id.localeCompare(b.id));
+const catalogTracks = tracks.map(track => ({
+    audioUrl: track.audioUrl,
+    category: track.category,
+    data: track.data,
+    flags: track.flags,
+    id: track.id,
+    peaks: [] as number[],
+    slug: track.slug,
+}));
 ---
 
 <Layout
@@ -18,5 +27,5 @@ const tracks = entries
 >
     <Player client:only="react" tracks={tracks} />
     <Hero tracks={tracks} />
-    <Catalog client:only="react" tracks={tracks} />
+    <Catalog client:load tracks={catalogTracks} />
 </Layout>

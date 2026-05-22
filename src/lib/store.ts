@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
+type PersistedPlayer = Pick<PlayerState, 'collapsed' | 'highpass' | 'lowpass' | 'repeat' | 'volume'>;
+
 interface PlayerState {
     collapsed: boolean;
     duration: number;
@@ -25,6 +27,14 @@ const INITIAL: PlayerState = {
 };
 
 function createPlayerStore() {
+    const FILTER_Q = 0.707;
+    const FILTER_SMOOTH = 0.015;
+    const HP_MAX = 5000;
+    const HP_MIN = 20;
+    const LP_MAX = 20000;
+    const LP_MIN = 200;
+    const VU_SCALE = 2.5;
+
     let analyserL: AnalyserNode | null = null;
     let analyserR: AnalyserNode | null = null;
     let audio: HTMLAudioElement | null = null;
@@ -36,25 +46,17 @@ function createPlayerStore() {
     let timeBufL: Float32Array<ArrayBuffer> | null = null;
     let timeBufR: Float32Array<ArrayBuffer> | null = null;
 
-    const FILTER_Q = 0.707;
-    const FILTER_SMOOTH = 0.015;
-    const HP_MAX = 5000;
-    const HP_MIN = 20;
-    const LP_MAX = 20000;
-    const LP_MIN = 200;
-    const VU_SCALE = 2.5;
+    function mapHighpass(v: number): number {
+        return HP_MIN * Math.pow(HP_MAX / HP_MIN, v);
+    }
 
     function mapLowpass(v: number): number {
         return LP_MIN * Math.pow(LP_MAX / LP_MIN, v);
     }
 
-    function mapHighpass(v: number): number {
-        return HP_MIN * Math.pow(HP_MAX / HP_MIN, v);
-    }
-
-    const restore = (): PlayerState => {
+    function restoreState(): PlayerState {
         try {
-            const saved = JSON.parse(localStorage.getItem('player') || 'null');
+            const saved: Partial<PersistedPlayer> = JSON.parse(localStorage.getItem('player') || 'null');
 
             if (saved && typeof saved === 'object') {
                 return {
@@ -71,12 +73,12 @@ function createPlayerStore() {
         }
 
         return { ...INITIAL };
-    };
+    }
 
     const store = {
         emit() {
-            for (const fn of store.listeners) {
-                fn(store.state);
+            for (const listener of store.listeners) {
+                listener(store.state);
             }
         },
 
@@ -192,50 +194,51 @@ function createPlayerStore() {
         listeners: new Set<(state: PlayerState) => void>(),
 
         load(track: Track) {
-            const el = store.getAudio();
-            const currentSrc = el.src ? new URL(el.src).pathname : '';
+            const element = store.getAudio();
+            const currentSrc = element.src ? new URL(element.src).pathname : '';
 
             if (currentSrc === track.audioUrl && store.state.trackId === track.id) {
-                if (el.paused) {
-                    el.play().catch(() => {});
+                if (element.paused) {
+                    element.play().catch(() => {});
                 } else {
-                    el.pause();
+                    element.pause();
                 }
 
                 return;
             }
 
-            el.pause();
-            store.set({ duration: track.duration, playing: true, position: 0, trackId: track.id });
-            el.src = track.audioUrl;
+            element.pause();
+            store.set({ duration: track.data.duration, playing: true, position: 0, trackId: track.id });
+            element.src = track.audioUrl;
 
             const onReady = () => {
-                el.removeEventListener('canplay', onReady);
-                el.play().catch(() => {});
+                element.removeEventListener('canplay', onReady);
+                element.play().catch(() => {});
             };
 
-            el.addEventListener('canplay', onReady);
-            el.load();
+            element.addEventListener('canplay', onReady);
+            element.load();
         },
 
         save() {
             try {
-                localStorage.setItem('player', JSON.stringify({
+                const persisted: PersistedPlayer = {
                     collapsed: store.state.collapsed,
                     highpass: store.state.highpass,
                     lowpass: store.state.lowpass,
                     repeat: store.state.repeat,
                     volume: store.state.volume,
-                }));
+                };
+                localStorage.setItem('player', JSON.stringify(persisted));
             } catch {
                 return;
             }
         },
 
         seek(position: number) {
-            const el = store.getAudio();
-            const clamped = Math.max(0, Math.min(position, el.duration || store.state.duration));
-            el.currentTime = clamped;
+            const element = store.getAudio();
+            const clamped = Math.max(0, Math.min(position, element.duration || store.state.duration));
+            element.currentTime = clamped;
             store.set({ position: clamped });
         },
 
@@ -266,25 +269,25 @@ function createPlayerStore() {
             store.set({ volume });
         },
 
-        state: restore(),
+        state: restoreState(),
 
-        subscribe(fn: (state: PlayerState) => void) {
-            store.listeners.add(fn);
+        subscribe(listener: (state: PlayerState) => void) {
+            store.listeners.add(listener);
 
             return () => {
-                store.listeners.delete(fn);
+                store.listeners.delete(listener);
             };
         },
 
         toggle() {
             if (!store.state.trackId) return;
 
-            const el = store.getAudio();
+            const element = store.getAudio();
 
-            if (el.paused) {
-                el.play().catch(() => {});
+            if (element.paused) {
+                element.play().catch(() => {});
             } else {
-                el.pause();
+                element.pause();
             }
         },
     };
@@ -292,8 +295,10 @@ function createPlayerStore() {
     return store;
 }
 
+const SERVER_SNAPSHOT: PlayerState = { ...INITIAL };
+
 export const PLAYER = createPlayerStore();
 
 export function usePlayer(): PlayerState {
-    return useSyncExternalStore(PLAYER.subscribe, PLAYER.get);
+    return useSyncExternalStore(PLAYER.subscribe, PLAYER.get, () => SERVER_SNAPSHOT);
 }

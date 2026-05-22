@@ -15,9 +15,6 @@ export default defineConfig({
         robots(),
         sitemap({ lastmod: new Date() }),
     ],
-    prefetch: {
-        defaultStrategy: 'hover',
-    },
     site: 'https://music.aephonics.com',
     vite: {
         plugins: [tailwind()],

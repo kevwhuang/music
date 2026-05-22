@@ -5,11 +5,13 @@ import path from 'node:path';
 import { buildSlug } from '../src/lib/utils';
 
 const AUDIO_DIR = path.resolve(import.meta.dirname, '../public/audio');
-const WAVEFORM_BARS = 500;
 const CATEGORIES = ['music', 'productions', 'sessions'] as const;
 const CONTENT_DIR = path.resolve(import.meta.dirname, '../src/content');
+const PEAKS_PATH = path.join(CONTENT_DIR, 'peaks.json');
 const PRECISION = 1000;
+const WAVEFORM_BARS = 500;
 
+const allPeaks: Record<string, number[]> = {};
 
 function extractPeaks(audioPath: string): number[] {
     const buffer = execSync(
@@ -51,17 +53,19 @@ for (const category of CATEGORIES) {
 
     if (!fs.existsSync(dir)) continue;
 
-    for (const file of fs.readdirSync(dir)) {
+    for (const file of fs.readdirSync(dir).sort()) {
         if (!file.endsWith('.json')) continue;
 
+        const id = file.replace('.json', '').toUpperCase();
         const jsonPath = path.join(dir, file);
         const track = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
-        const slug = buildSlug(track.id, track.title);
+        const slug = buildSlug(id, track.data.title);
         const audioPath = path.join(AUDIO_DIR, `${slug}.mp3`);
 
         if (!fs.existsSync(audioPath)) continue;
 
-        track.peaks = extractPeaks(audioPath);
-        fs.writeFileSync(jsonPath, JSON.stringify(track, null, 4));
+        allPeaks[id] = extractPeaks(audioPath);
     }
 }
+
+fs.writeFileSync(PEAKS_PATH, JSON.stringify(allPeaks, null, 4));

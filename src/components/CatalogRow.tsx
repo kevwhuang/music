@@ -14,7 +14,7 @@ function DownloadButton({ children, disabled, onClick }: {
 }) {
     return (
         <button
-            className="catalog__download px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-[0.6875rem] tracking-[0.18em] [font-family:inherit] bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 cursor-pointer"
+            className="catalog__download px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-xs tracking-[0.2em] font-mono bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 cursor-pointer"
             disabled={disabled}
             onClick={onClick}
         >
@@ -32,7 +32,7 @@ function DownloadLink({ children, disabled, href }: {
     if (disabled || cooldown) {
         return (
             <span
-                className="inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-[0.6875rem] tracking-[0.18em] no-underline bg-transparent text-zinc-400 opacity-40 cursor-not-allowed"
+                className="inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-xs tracking-[0.2em] no-underline font-mono bg-transparent text-zinc-400 opacity-40 cursor-not-allowed"
             >
                 {children}
             </span>
@@ -41,7 +41,7 @@ function DownloadLink({ children, disabled, href }: {
 
     return (
         <a
-            className="catalog__download inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-[0.6875rem] tracking-[0.18em] no-underline [font-family:inherit] bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 cursor-pointer"
+            className="catalog__download inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-xs tracking-[0.2em] no-underline font-mono bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 cursor-pointer"
             download
             href={href}
             onClick={() => {
@@ -69,74 +69,76 @@ function PlayingDots({ paused }: { paused: boolean }) {
     );
 }
 
-export function CatalogRow({ idx, isActive, isPlaying, pin, t }: {
-    idx: number;
+export function CatalogRow({ index, isActive, isPlaying, pinModal, track }: {
+    index: number;
     isActive: boolean;
     isPlaying: boolean;
-    pin: { open: (track: Track, kind: 'master' | 'mixdown') => void };
-    t: Track;
+    pinModal: Pick<PinModalActions, 'open'>;
+    track: Track;
 }) {
-    const noMaster = !t.master;
-    const onPlay = () => {
-        if (!noMaster) PLAYER.load(t);
-    };
-    const slug = buildSlug(t.id, t.title);
+    const hasMaster = track.flags.master;
+    const hasMixdown = track.flags.mixdown;
+    const noMaster = !hasMaster;
+    const slug = buildSlug(track.id, track.data.title);
+
+    function handlePlay() {
+        if (!noMaster) PLAYER.load(track);
+    }
+
+    function handleClick() {
+        handlePlay();
+    }
+
+    function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            handlePlay();
+        }
+    }
 
     return (
         <div
-            className={`catalog__row ${isActive ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''} grid items-center gap-5 px-5 py-6 text-sm transition-[background] duration-150 delay-[10ms] ${noMaster ? '' : 'cursor-pointer'}`}
-            onClick={noMaster
-                ? undefined
-                : (e) => {
-                        onPlay();
-                        (e.currentTarget as HTMLElement).blur();
-                    }}
-            onKeyDown={noMaster
-                ? undefined
-                : (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onPlay();
-                        }
-                    }}
-            role="row"
-            style={{ boxShadow: idx ? 'inset 0 1px 0 var(--color-white-20)' : 'none' }}
+            className={`catalog__row ${isActive ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''} grid items-center gap-6 px-5 py-6 text-base transition-[background] duration-150 delay-[10ms] ${noMaster ? '' : 'cursor-pointer'}`}
+            onClick={noMaster ? undefined : handleClick}
+            onKeyDown={noMaster ? undefined : handleKeyDown}
+            role="listitem"
+            style={{ boxShadow: index ? 'inset 0 1px 0 var(--color-white-20)' : 'none' }}
             tabIndex={noMaster ? -1 : 0}
         >
-            <div className="flex items-center justify-center" role="gridcell">
+            <div className="flex items-center justify-center">
                 {isActive && <PlayingDots paused={!isPlaying} />}
-                {!isActive && t.star && (
+                {!isActive && track.flags.star && (
                     <span className="text-[var(--color-gold)]">
                         <StarIcon />
                         <span className="sr-only">Starred</span>
                     </span>
                 )}
-                {!isActive && !t.star && t.heart && (
+                {!isActive && !track.flags.star && track.flags.heart && (
                     <span className="text-[var(--color-rose)]">
                         <HeartIcon />
                         <span className="sr-only">Hearted</span>
                     </span>
                 )}
             </div>
-            <span className="text-[0.8125rem] tracking-[0.04em] tabular-nums text-zinc-400" role="gridcell">{t.id}</span>
-            <div className="flex flex-col min-w-0 gap-[5px]" role="gridcell">
-                <div className={`catalog__track font-medium text-sm truncate tracking-[-0.005em] leading-[1.2] font-inter ${t.title ? 'text-zinc-100' : 'text-zinc-500 italic'}`}>
-                    {t.title || ' '}
+            <span className="text-sm tracking-[0.04em] tabular-nums text-zinc-400">{track.id}</span>
+            <div className="flex flex-col min-w-0 gap-[5px]">
+                <div className={`catalog__track font-medium text-base truncate leading-tight font-inter ${track.data.title ? 'text-zinc-100' : 'text-zinc-500 italic'}`}>
+                    {track.data.title || ' '}
                 </div>
-                <div className="min-h-4 font-mono text-[0.6875rem] tracking-[0.04em] text-zinc-400">
+                <div className="min-h-4 font-mono text-xs tracking-[0.04em] text-zinc-400">
                     {[
-                        t.year > 0 && String(t.year),
-                        t.bpm.length > 0 && `BPM ${t.bpm.join(' ')}`,
-                        t.key.length > 0 && t.key.join(', '),
+                        track.data.year > 0 && String(track.data.year),
+                        track.data.bpm > 0 && `BPM ${track.data.bpm}${track.data.tempo ? ` ${track.data.tempo}` : ''}`,
+                        track.data.keys.length > 0 && track.data.keys.join(', '),
                     ].filter(Boolean).join(' │ ')}
                 </div>
             </div>
-            <span className="text-[0.8125rem] tabular-nums text-right text-zinc-400" role="gridcell">{t.title ? formatDuration(t.duration) : ''}</span>
-            <div className="flex justify-start gap-1.5 pl-4" aria-label="Download options" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="gridcell" tabIndex={-1}>
-                <DownloadLink disabled={!t.master} href={`/audio/${slug}.mp3`}>MP3</DownloadLink>
-                <DownloadButton disabled={!t.master} onClick={() => pin.open(t, 'master')}>WAV</DownloadButton>
-                <DownloadButton disabled={!t.mixdown} onClick={() => { if (t.mixdown) pin.open(t, 'mixdown'); }}>MIX</DownloadButton>
+            <span className="text-sm tabular-nums text-right text-zinc-400">{track.data.title ? formatDuration(track.data.duration) : ''}</span>
+            <div className="flex justify-start gap-1.5 pl-4" aria-label="Download options" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="toolbar" tabIndex={-1}>
+                <DownloadLink disabled={!hasMaster} href={`/audio/${slug}.mp3`}>MP3</DownloadLink>
+                <DownloadButton disabled={!hasMaster} onClick={() => pinModal.open(track, 'master')}>WAV</DownloadButton>
+                <DownloadButton disabled={!hasMixdown} onClick={() => { if (hasMixdown) pinModal.open(track, 'mixdown'); }}>MIX</DownloadButton>
             </div>
         </div>
     );

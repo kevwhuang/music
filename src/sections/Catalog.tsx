@@ -3,11 +3,11 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import gsap from 'gsap';
 
 import { CatalogRow } from '@components/CatalogRow';
-import { ChevronIcon } from '@components/ChevronIcon';
 import { ErrorBoundary } from '@components/ErrorBoundary';
-import { HeartIcon } from '@components/HeartIcon';
-import { SearchIcon } from '@components/SearchIcon';
-import { StarIcon } from '@components/StarIcon';
+import { IconChevron } from '@components/IconChevron';
+import { IconHeart } from '@components/IconHeart';
+import { IconSearch } from '@components/IconSearch';
+import { IconStar } from '@components/IconStar';
 import { buildSlug, categoryLabel } from '@lib/utils';
 import { usePlayer } from '@lib/store';
 
@@ -41,9 +41,8 @@ const ENTRANCE_Y = 30;
 const FOCUS_DELAY = 50;
 const PAGE_ADJACENT = 2;
 const PAGE_SIZE = 50;
-const PIN_SUCCESS_DELAY = 1400;
-const PIN_VERIFY_DELAY = 600;
-const SORT_FALLBACK = 9999;
+const PIN_SUCCESS_DELAY = 3_000;
+const SORT_FALLBACK = 9_999;
 
 const PinModalContext = createContext<PinModalActions | null>(null);
 
@@ -69,6 +68,16 @@ function allYears(tracks: Track[]): number[] {
     }
 
     return [...years].sort((a, b) => a - b);
+}
+
+function downloadTrack(target: PinModalTarget) {
+    const slug = buildSlug(target.track.id, target.track.data.title);
+    const file = target.kind === 'master' ? `${slug}.wav` : `${slug}_mixdown.wav`;
+    const link = document.createElement('a');
+
+    link.href = `/audio/${file}`;
+    link.download = file;
+    link.click();
 }
 
 function usePinModal() {
@@ -212,18 +221,18 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs tracking-[0.2em] text-zinc-400">
                 <span>BPM</span>
-                <span className="tracking-[0.04em] tabular-nums" style={{ color: isDefault ? 'var(--color-white-60)' : 'var(--color-orange-80)' }}>
+                <span className="tabular-nums tracking-[0.04em]" style={{ color: isDefault ? 'var(--color-white-60)' : 'var(--color-orange-80)' }}>
                     {low}
                     –
                     {high}
                 </span>
             </div>
-            <div className="relative flex items-center h-11">
-                <div className="relative w-full h-1.5 rounded-sm bg-zinc-900" ref={trackRef}>
-                    <div className="absolute top-0 bottom-0 rounded-sm bg-[var(--color-orange-80)]" style={{ left: `${percentLow}%`, right: `${100 - percentHigh}%` }} />
+            <div className="flex items-center relative h-12">
+                <div className="relative h-1.5 w-full rounded-sm bg-zinc-900 select-none" ref={trackRef}>
+                    <div className="absolute bottom-0 top-0 rounded-sm bg-orange-80" style={{ left: `${percentLow}%`, right: `${100 - percentHigh}%` }} />
                     {([['lo', percentLow], ['hi', percentHigh]] as const).map(([k, p]) => (
                         <div
-                            className="absolute top-1/2 w-4 h-4 rounded-full border-2 border-[var(--color-orange-80)] bg-white cursor-ew-resize"
+                            className="-translate-x-1/2 -translate-y-1/2 absolute top-1/2 h-4 w-4 border-2 border-orange-80 rounded-full bg-white cursor-ew-resize touch-none"
                             aria-label={`BPM ${k === 'lo' ? 'minimum' : 'maximum'}`}
                             aria-valuemax={BPM_MAX}
                             aria-valuemin={BPM_MIN}
@@ -240,7 +249,7 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
                             }}
                             onPointerDown={handleDrag(k)}
                             role="slider"
-                            style={{ boxShadow: '0 2px 4px var(--color-black-40)', left: `${p}%`, touchAction: 'none', transform: 'translate(-50%, -50%)' }}
+                            style={{ boxShadow: '0 2px 4px var(--color-black-40)', left: `${p}%` }}
                             tabIndex={0}
                         />
                     ))}
@@ -254,6 +263,7 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
     const trackList = useTrackList(tracks);
     const pinModal = usePinModal();
     const player = usePlayer();
+    const headingRef = useRef<HTMLDivElement>(null);
     const sectionRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
@@ -268,42 +278,46 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
         });
     }, []);
 
-    const handlePageChange = (p: number) => {
+    function handlePageChange(p: number) {
         if (p === trackList.page) return;
         trackList.setPage(p);
-        sectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+        if (headingRef.current) {
+            const playerHeight = document.querySelector<HTMLElement>('[aria-label="Audio player"]')?.offsetHeight ?? 0;
+            const top = headingRef.current.getBoundingClientRect().top + window.scrollY - playerHeight;
+            window.scrollTo({ behavior: 'smooth', top });
+        }
+    }
 
     return (
-        <section className="px-10 py-48 font-mono text-base" aria-label="Catalog" ref={sectionRef}>
-            <div className="max-w-[92.5rem] mx-auto">
-                <div className="flex items-baseline justify-between gap-6 px-5 mb-8">
-                    <h2 className="catalog__heading m-0 font-medium font-inter text-4xl tracking-[-0.025em]">
+        <section className="py-24 font-mono text-base" aria-label="Catalog" ref={sectionRef}>
+            <div className="max-w-7xl mx-auto">
+                <div className="flex items-baseline justify-between gap-6 mb-6 px-5" ref={headingRef}>
+                    <h2 className="catalog__heading m-0 font-inter font-medium text-4xl tracking-[-0.025em]">
                         Catalog
                     </h2>
-                    <span className="font-mono text-xl tracking-[0.02em] text-zinc-400" aria-live="polite">
+                    <span className="text-xl tracking-[0.02em] text-zinc-400" aria-live="polite">
                         {trackList.total}
                         {' of '}
                         {tracks.length}
                     </span>
                 </div>
                 <Filters list={trackList} tracks={tracks} />
-                <div className="catalog__grid grid" aria-label="Track catalog" role="list">
-                    <div className="catalog__row grid items-center gap-6 px-5 py-3.5 mt-6 border border-zinc-800 text-xs tracking-[0.2em] bg-zinc-900 text-zinc-400">
-                        <span />
+                <div className="catalog__grid grid mb-6" aria-label="Track catalog" role="list">
+                    <div className="catalog__row grid items-center gap-6 px-5 py-3 border border-zinc-800 text-xs tracking-[0.2em] bg-zinc-900 text-zinc-400">
+                        <span aria-hidden="true" />
                         <SortHeader field="id" label="ID" list={trackList} />
                         <SortHeader field="title" label="TITLE" list={trackList} />
                         <SortHeader align="right" field="duration" label="LENGTH" list={trackList} />
                         <span className="pl-4 text-left">DOWNLOAD</span>
                     </div>
-                    <div className="catalog__body grid grid-cols-subgrid col-span-full border border-zinc-800 border-t-0">
+                    <div className="catalog__body col-span-full grid grid-cols-subgrid border border-t-0 border-zinc-800">
                         {trackList.visible.length === 0 && (
-                            <div className="col-span-full p-20 text-center text-base text-zinc-400" aria-live="polite" role="status">
+                            <div className="col-span-full p-16 text-base text-center text-zinc-400" aria-live="polite" role="status">
                                 No tracks match the current filters.
                             </div>
                         )}
                         {trackList.visible.length > 0 && trackList.visible.map((track, i) => (
-                            <CatalogRow key={track.id} index={i} isActive={player.trackId === track.id} isPlaying={player.trackId === track.id && player.playing} pinModal={pinModal} track={track} />
+                            <CatalogRow index={i} isActive={player.trackId === track.id} isPlaying={player.trackId === track.id && player.playing} key={track.id} pinModal={pinModal} track={track} />
                         ))}
                     </div>
                 </div>
@@ -317,11 +331,11 @@ function DownloadChip({ children, kind }: {
     children: React.ReactNode; kind: 'master' | 'mixdown';
 }) {
     return (
-        <div className="px-3 py-2.5 rounded-sm border border-zinc-700 text-xs">
-            <div className="mb-1 tracking-[0.2em] text-zinc-400">
+        <div className="text-xs">
+            <div className="mb-2 tracking-[0.2em] text-zinc-400">
                 {kind === 'master' ? 'MASTER' : 'MIXDOWN'}
             </div>
-            <div className="text-zinc-100 break-all leading-tight">
+            <div className="px-4 py-2.5 border border-zinc-700 break-all leading-tight text-zinc-100">
                 {children}
             </div>
         </div>
@@ -333,7 +347,7 @@ function FavoriteChip({ active, color, icon, label, onClick }: {
 }) {
     return (
         <button
-            className={`catalog__favorite flex items-center justify-center w-9 h-9 rounded-sm border transition-[background,border-color,color] duration-150 cursor-pointer ${active ? '' : 'border-[var(--color-white-20)]'}`}
+            className={`catalog__favorite flex items-center justify-center h-9 w-9 border rounded-sm duration-150 transition-[background,border-color,color] cursor-pointer ${active ? '' : 'border-white-20'}`}
             aria-label={label}
             aria-pressed={active}
             onClick={onClick}
@@ -350,12 +364,12 @@ function FavoriteChip({ active, color, icon, label, onClick }: {
 
 function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
     return (
-        <div className="flex flex-col gap-5 p-7 rounded-sm border border-zinc-800 bg-zinc-800">
-            <div className="flex items-center gap-3.5">
-                <div className="flex flex-1 items-center gap-3 px-4 py-2.5 rounded-sm border border-transparent bg-zinc-900 transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus-within:border-[var(--color-orange-80)]">
-                    <SearchIcon />
+        <div className="flex flex-col gap-4 mb-6 p-6 border border-zinc-800 rounded-sm bg-zinc-800">
+            <div className="flex items-center gap-4">
+                <div className="focus-within:border-orange-80 hover:border-orange-80 flex flex-1 items-center gap-3 px-4 py-2.5 border border-transparent rounded-sm bg-zinc-900 duration-150 transition-[border-color]">
+                    <IconSearch />
                     <input
-                        className="catalog__search flex-1 border-none font-sans text-base bg-transparent text-zinc-100 outline-none"
+                        className="catalog__search flex-1 border-none text-base bg-transparent text-zinc-100 outline-none"
                         aria-label="Search by title or ID"
                         maxLength={100}
                         onChange={e => list.setQuery(e.target.value)}
@@ -371,7 +385,7 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     />
                     {list.query && (
                         <button
-                            className="border-none text-sm font-mono bg-none text-zinc-400 hover:opacity-80 active:opacity-70 cursor-pointer"
+                            className="active:opacity-70 hover:opacity-80 border-none text-sm bg-transparent text-zinc-400 cursor-pointer"
                             aria-label="Clear search"
                             onClick={() => list.setQuery('')}
                         >
@@ -382,9 +396,9 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                 <div className="flex rounded-sm bg-zinc-900">
                     {(['music', 'sessions', 'productions'] as const).map((c, i) => (
                         <Fragment key={c}>
-                            {i > 0 && <div className="w-px my-2 bg-zinc-700" />}
+                            {i > 0 && <div className="w-px my-2 bg-zinc-700" aria-hidden="true" />}
                             <button
-                                className={`catalog__category ${list.categories[c] ? 'catalog__category--active' : 'text-zinc-400'} px-4 py-2.5 border-0 text-sm tracking-[0.2em] font-mono transition-[background,color,opacity] duration-150 cursor-pointer`}
+                                className={`catalog__category ${list.categories[c] ? 'catalog__category--active' : 'text-zinc-400'} px-4 py-2.5 border-0 text-sm tracking-[0.2em] duration-150 transition-[background,color,opacity] cursor-pointer`}
                                 aria-pressed={list.categories[c]}
                                 onClick={() => list.setCategories({ ...list.categories, [c]: !list.categories[c] })}
                             >
@@ -394,14 +408,14 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     ))}
                 </div>
                 <div className="flex gap-2">
-                    <FavoriteChip active={list.favorites.star} color="var(--color-gold)" icon={<StarIcon />} label="Starred only" onClick={() => list.setFavorites({ ...list.favorites, star: !list.favorites.star })} />
-                    <FavoriteChip active={list.favorites.heart} color="var(--color-rose)" icon={<HeartIcon />} label="Hearted only" onClick={() => list.setFavorites({ ...list.favorites, heart: !list.favorites.heart })} />
+                    <FavoriteChip active={list.favorites.star} color="var(--color-gold)" icon={<IconStar />} label="Starred only" onClick={() => list.setFavorites({ ...list.favorites, star: !list.favorites.star })} />
+                    <FavoriteChip active={list.favorites.heart} color="var(--color-rose)" icon={<IconHeart />} label="Hearted only" onClick={() => list.setFavorites({ ...list.favorites, heart: !list.favorites.heart })} />
                 </div>
             </div>
             <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-4">
-                <MultiSelect label="YEAR" options={allYears(tracks).map(y => [y, String(y)] as [number, string])} placeholder="All" selected={list.years} onChange={list.setYears} />
-                <MultiSelect label="KEY" options={allKeys(tracks).map(k => [k, k] as [string, string])} placeholder="All" selected={list.keys} onChange={list.setKeys} />
-                <BPMSlider value={list.bpmRange} onChange={list.setBpmRange} />
+                <MultiSelect label="YEAR" onChange={list.setYears} options={allYears(tracks).map(y => [y, String(y)] as [number, string])} placeholder="All" selected={list.years} />
+                <MultiSelect label="KEY" onChange={list.setKeys} options={allKeys(tracks).map(k => [k, k] as [string, string])} placeholder="All" selected={list.keys} />
+                <BPMSlider onChange={list.setBpmRange} value={list.bpmRange} />
             </div>
         </div>
     );
@@ -419,7 +433,10 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
             if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
         };
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setOpen(false);
+            if (e.key === 'Escape') {
+                setOpen(false);
+                (document.activeElement as HTMLElement)?.blur();
+            }
         };
         document.addEventListener('mousedown', onClick);
         document.addEventListener('keydown', onKey);
@@ -433,14 +450,14 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
     let summary: string;
 
     if (selected.length === 0) summary = placeholder;
-    else if (selected.length <= 5) summary = selected.map(v => options.find(([k]) => k === v)?.[1] || String(v)).join(', ');
+    else if (selected.length <= 5) summary = options.filter(([k]) => selected.includes(k)).map(([, l]) => l).join(', ');
     else summary = `${selected.length} selected`;
 
     return (
-        <div className="relative flex flex-col gap-2" ref={ref}>
+        <div className="flex flex-col relative gap-2" ref={ref}>
             <span className="text-xs tracking-[0.2em] text-zinc-400">{label}</span>
             <button
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-sm border font-sans text-base text-left bg-zinc-900 transition-[border-color] duration-150 focus-visible:outline-none active:opacity-70 cursor-pointer ${open ? 'border-[var(--color-orange-80)]' : 'border-transparent hover:border-[var(--color-orange-80)]'}`}
+                className={`active:opacity-70 focus-visible:outline-none flex items-center justify-between px-4 py-2.5 border rounded-sm text-base text-left bg-zinc-900 duration-150 transition-[border-color] cursor-pointer select-none ${open ? 'border-orange-80' : 'border-transparent hover:border-orange-80'}`}
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={`${label} filter`}
@@ -448,9 +465,9 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
                 style={{ color: selected.length ? 'var(--color-white)' : 'var(--color-white-60)' }}
             >
                 <span className="truncate">{summary}</span>
-                <ChevronIcon open={open} />
+                <IconChevron open={open} />
             </button>
-            {open && <MultiSelectPopover options={options} selected={selected} onChange={onChange} />}
+            {open && <MultiSelectPopover onChange={onChange} options={options} selected={selected} />}
         </div>
     );
 }
@@ -461,13 +478,13 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
     const [search, setSearch] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
     const filtered = options.filter(([, l]) => !search || l.toLowerCase().includes(search.toLowerCase()));
-    const toggleSelection = (v: T) => {
-        if (selected.includes(v)) onChange(selected.filter(s => s !== v));
+    function toggleSelection(v: T) {
+        if (selected.includes(v)) onChange(selected.filter(val => val !== v));
         else onChange([...selected, v]);
-    };
+    }
 
     return (
-        <div className="catalog__dropdown absolute top-[calc(100%+4px)] left-0 right-0 flex flex-col z-50 rounded-sm border border-zinc-700 bg-zinc-800">
+        <div className="catalog__dropdown absolute flex flex-col left-0 right-0 top-[calc(100%+4px)] z-20 border border-zinc-700 rounded-sm bg-zinc-800">
             <div className="flex items-center gap-2 px-3 py-2.5">
                 <span className="flex-1 text-xs tracking-[0.2em] text-zinc-400">
                     {selected.length}
@@ -475,7 +492,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                     selected
                 </span>
                 <button
-                    className="border-none text-xs tracking-[0.2em] font-mono bg-transparent hover:opacity-80 active:opacity-70 cursor-pointer"
+                    className="active:opacity-70 hover:opacity-80 border-none text-xs tracking-[0.2em] bg-transparent cursor-pointer"
                     disabled={!selected.length}
                     onClick={() => onChange([])}
                     style={{ color: selected.length ? 'var(--color-orange-80)' : 'var(--color-white-40)' }}
@@ -484,7 +501,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                 </button>
             </div>
             <input
-                className="catalog__dropdown-input px-4 py-2.5 rounded-sm border border-zinc-700 font-sans text-sm bg-zinc-900 text-zinc-100 outline-none focus-visible:outline-none transition-[border-color] duration-150 hover:border-[var(--color-orange-80)] focus:border-[var(--color-orange-80)]"
+                className="catalog__dropdown-input focus-visible:outline-none focus:border-orange-80 hover:border-orange-80 px-4 py-2.5 border border-zinc-700 outline-none rounded-sm text-sm bg-zinc-900 text-zinc-100 duration-150 transition-[border-color]"
                 aria-label="Filter options"
                 maxLength={20}
                 onChange={e => setSearch(e.target.value)}
@@ -493,9 +510,9 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                 type="text"
                 value={search}
             />
-            <ul className="max-h-[400px] p-1.5 overflow-y-auto list-none m-0" role="listbox">
+            <ul className="overflow-y-auto max-h-[400px] m-0 p-1.5 list-none" role="listbox">
                 {filtered.length === 0 && (
-                    <li className="p-4 text-center text-zinc-400 text-sm">No matches.</li>
+                    <li className="p-4 text-center text-sm text-zinc-400">No matches.</li>
                 )}
                 {filtered.length > 0 && filtered.map(([v, l]) => {
                     const isSelected = selected.includes(v);
@@ -507,13 +524,13 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                             role="option"
                         >
                             <label
-                                className="flex items-center gap-2.5 px-3 py-2.5 rounded-sm text-sm cursor-pointer"
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-sm text-sm cursor-pointer"
                                 onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
                                 onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
                                 style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
                             >
                                 <span
-                                    className="flex items-center justify-center w-3.5 h-3.5 rounded-sm text-xs text-white"
+                                    className="flex items-center justify-center h-3.5 w-3.5 rounded-sm text-xs text-white"
                                     style={{
                                         background: isSelected ? 'var(--color-orange-80)' : 'var(--color-transparent)',
                                         border: `1px solid ${isSelected ? 'var(--color-orange-80)' : 'var(--color-zinc-500)'}`,
@@ -542,7 +559,7 @@ function PageButton({ children, active, disabled, label, onClick }: {
 }) {
     return (
         <button
-            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-3 py-2 rounded-sm border border-zinc-700 font-medium text-sm font-mono bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} transition-[background,border-color,color,opacity] duration-150 ${!active && !disabled ? 'cursor-pointer' : ''}`}
+            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-3 py-2 border border-zinc-700 rounded-sm font-medium text-sm bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} duration-150 transition-[background,border-color,color,opacity] select-none ${!active && !disabled ? 'cursor-pointer' : ''}`}
             aria-label={label}
             disabled={disabled}
             onClick={onClick}
@@ -562,19 +579,19 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
     }
 
     return (
-        <div className="flex items-center justify-between px-5 mt-7 text-sm tracking-[0.2em]">
+        <div className="flex items-center justify-between px-5 text-sm tracking-[0.2em]">
             <span className="text-zinc-400">
                 {list.total === 0 ? '0' : `${list.page * list.PAGE_SIZE + 1}–${Math.min((list.page + 1) * list.PAGE_SIZE, list.total)}`}
                 {' OF '}
                 {list.total}
             </span>
             <div className="flex gap-1">
-                <PageButton disabled={list.page === 0} label="Previous page" onClick={() => setPage(Math.max(0, list.page - 1))}><span className="text-base leading-none">‹</span></PageButton>
+                <PageButton disabled={list.page === 0} label="Previous page" onClick={() => setPage(Math.max(0, list.page - 1))}><span className="leading-none text-base">‹</span></PageButton>
                 {showPages.map((p, i) => {
-                    if (p === '…') return <span className="px-2.5 py-2 text-zinc-500" key={`e${i}`}>…</span>;
-                    return <PageButton key={p} active={p === list.page} label={`Page ${p + 1}`} onClick={() => setPage(p)}>{p + 1}</PageButton>;
+                    if (p === '…') return <span className="px-3 py-2 text-zinc-500" key={`e${i}`}>…</span>;
+                    return <PageButton active={p === list.page} key={p} label={`Page ${p + 1}`} onClick={() => setPage(p)}>{p + 1}</PageButton>;
                 })}
-                <PageButton disabled={list.page === list.pageCount - 1} label="Next page" onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}><span className="text-base leading-none">›</span></PageButton>
+                <PageButton disabled={list.page === list.pageCount - 1} label="Next page" onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}><span className="leading-none text-base">›</span></PageButton>
             </div>
         </div>
     );
@@ -621,7 +638,7 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
 
     return (
         <div
-            className="modal__overlay fixed inset-0 flex items-center justify-center z-[1000]"
+            className="modal__overlay fixed flex inset-0 items-center justify-center z-40 backdrop-blur"
             aria-labelledby={titleId}
             aria-modal="true"
             role="dialog"
@@ -629,35 +646,35 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
             <button
                 className="absolute inset-0 cursor-default"
                 aria-label="Close dialog"
-                onClick={close}
+                onClick={state === 'success' ? undefined : close}
                 tabIndex={-1}
                 type="button"
             />
             <form
-                className={`modal ${state === 'error' ? 'modal--shake' : ''} relative w-[460px] max-w-[90vw] px-8 py-7 text-zinc-100`}
+                className={`modal ${state === 'error' ? 'modal--shake' : ''} relative max-w-[90vw] w-[460px] p-8 text-zinc-100`}
                 onSubmit={submit}
                 ref={formRef}
             >
-                <div id={titleId} className="mb-1 font-medium text-2xl tracking-[-0.01em]">
+                <h2 id={titleId} className="mb-1 font-medium text-2xl tracking-[-0.01em]">
                     {target.track.data.title || '(untitled)'}
-                </div>
+                </h2>
                 <div className="mb-6 text-xs tracking-[0.2em] text-zinc-400">
                     {`${categoryLabel(target.track.category).toUpperCase()} · ${target.track.id} · ${target.track.data.year}${target.track.data.bpm > 0 ? ` · BPM ${target.track.data.bpm}${target.track.data.tempo ? ` ${target.track.data.tempo}` : ''}` : ''} · ${target.track.data.keys.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}`}
                 </div>
-                <div className="mb-5">
+                <div className="mb-6">
                     <DownloadChip kind={target.kind}>
                         {target.kind === 'master' ? `${slug}.wav` : `${slug}_mixdown.wav`}
                     </DownloadChip>
                 </div>
                 <label
-                    className="block mb-2 text-xs tracking-[0.2em] text-zinc-400"
+                    className="block mb-2 text-xs tracking-[0.2em] text-zinc-400 cursor-pointer"
                     htmlFor={pinInputId}
                 >
-                    AUTHORIZATION
+                    PIN
                 </label>
                 <input
                     id={pinInputId}
-                    className={`modal__input ${state === 'error' ? 'modal__input--error' : ''} w-full px-4 py-3.5 rounded-none font-mono text-2xl tracking-[0.5em] transition-[border-color,box-shadow] duration-150`}
+                    className={`modal__input ${state === 'error' ? 'modal__input--error' : ''} w-full mb-2 px-4 py-4 rounded-none text-2xl tracking-[0.5em] duration-150 transition-[border-color,box-shadow]`}
                     autoComplete="off"
                     maxLength={6}
                     onChange={e => setPin(e.target.value)}
@@ -666,26 +683,27 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
                     type="password"
                     value={pin}
                 />
-                <div className="min-h-5 mt-2 text-xs" aria-live="polite" role="status" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
+                <div className="min-h-5 mb-6 text-xs" aria-live="polite" role="status" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
                     {state === 'error' && 'Invalid pin.'}
                     {state === 'success' && 'Downloading…'}
                     {state === 'idle' && ' '}
                     {state === 'checking' && 'Verifying…'}
                 </div>
-                <div className="flex gap-2 mt-5">
+                <div className="flex gap-2">
                     <button
-                        className={`flex-[2] px-4 py-2.5 border-none font-medium text-sm tracking-[0.2em] font-mono text-white transition-[background,opacity] duration-150 hover:opacity-90 active:opacity-70 ${state === 'checking' ? 'opacity-60' : ''}`}
+                        className={`enabled:active:opacity-70 enabled:hover:opacity-90 flex-[2] px-4 py-2.5 border-none font-medium text-sm tracking-[0.2em] text-white duration-150 transition-[background,opacity] ${state === 'checking' || state === 'success' ? 'opacity-60' : ''}`}
                         disabled={state === 'checking' || state === 'success'}
                         style={{
-                            background: state === 'success' ? 'var(--color-sage-40)' : 'var(--color-orange-80)',
-                            cursor: state === 'checking' ? 'wait' : 'pointer',
+                            background: 'var(--color-orange-80)',
+                            cursor: state === 'checking' || state === 'success' ? 'not-allowed' : 'pointer',
                         }}
                         type="submit"
                     >
-                        {state === 'success' ? '✓ DOWNLOAD READY' : state === 'checking' ? 'VERIFYING…' : 'DOWNLOAD'}
+                        {state === 'checking' ? 'VERIFYING…' : 'DOWNLOAD'}
                     </button>
                     <button
-                        className="flex-1 px-4 py-2.5 border border-zinc-700 text-sm tracking-[0.2em] font-mono bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 hover:bg-[var(--color-white-20)] hover:border-[var(--color-orange-80)] hover:text-[var(--color-orange-80)] active:opacity-70 cursor-pointer"
+                        className={`enabled:active:opacity-70 enabled:hover:bg-white-20 enabled:hover:border-orange-80 enabled:hover:text-orange-80 flex-1 px-4 py-2.5 border border-zinc-700 text-sm tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] ${state === 'success' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        disabled={state === 'success'}
                         onClick={close}
                         type="button"
                     >
@@ -704,20 +722,47 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const triggerRef = useRef<HTMLElement | null>(null);
 
-    const close = () => {
+    function close() {
         setTarget(null);
         setPin('');
         setState('idle');
         triggerRef.current?.focus();
         triggerRef.current = null;
-    };
+    }
 
-    const open = (track: Track, kind: 'master' | 'mixdown') => {
+    function open(track: Track, kind: 'master' | 'mixdown') {
         triggerRef.current = document.activeElement as HTMLElement;
         setTarget({ kind, track });
         setPin('');
         setState('idle');
-    };
+    }
+
+    async function handleSubmit(e?: React.FormEvent<HTMLFormElement>) {
+        e?.preventDefault();
+        if (!target || state === 'checking') return;
+
+        setState('checking');
+
+        try {
+            const res = await fetch('/api/verify-pin', {
+                body: JSON.stringify({ pin }),
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+            });
+            const { ok } = await res.json();
+
+            if (!ok) {
+                setState('error');
+                return;
+            }
+
+            setState('success');
+            downloadTrack(target);
+            setTimeout(close, PIN_SUCCESS_DELAY);
+        } catch {
+            setState('error');
+        }
+    }
 
     useEffect(() => {
         if (target) setTimeout(() => inputRef.current?.focus(), FOCUS_DELAY);
@@ -725,25 +770,12 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && target) close();
+            if (e.key === 'Escape' && target && state !== 'success') close();
         };
         window.addEventListener('keydown', onKey);
 
         return () => window.removeEventListener('keydown', onKey);
     }, [target, close]);
-
-    const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
-        e?.preventDefault();
-        setState('checking');
-        setTimeout(() => {
-            if (/^\d{6}$/.test(pin)) {
-                setState('success');
-                setTimeout(() => close(), PIN_SUCCESS_DELAY);
-            } else {
-                setState('error');
-            }
-        }, PIN_VERIFY_DELAY);
-    };
 
     return (
         <PinModalContext.Provider value={{ close, open }}>
@@ -769,7 +801,7 @@ function SortHeader({ align, field, label, list }: { align?: 'right'; field: Sor
     return (
         <span className={align === 'right' ? 'text-right' : ''}>
             <button
-                className={`catalog__sort ${active ? 'catalog__sort--active' : ''} inline-flex items-center gap-[5px] border-none bg-transparent font-mono transition-[color] duration-150 cursor-pointer ${active ? '' : 'text-zinc-400'}`}
+                className={`catalog__sort ${active ? 'catalog__sort--active' : ''} inline-flex items-center gap-1 border-none bg-transparent duration-150 transition-[color] cursor-pointer ${active ? '' : 'text-zinc-400'}`}
                 aria-label={active ? `Sort by ${label.toLowerCase()}, ${list.sort.dir === 'asc' ? 'ascending' : 'descending'}` : `Sort by ${label.toLowerCase()}`}
                 onClick={() => {
                     if (list.sort.field !== field) list.setSort({ dir: 'asc', field });
@@ -779,7 +811,7 @@ function SortHeader({ align, field, label, list }: { align?: 'right'; field: Sor
             >
                 {label}
                 {active && (
-                    <span className="text-xs leading-none">{list.sort.dir === 'asc' ? '▲' : '▼'}</span>
+                    <span className="leading-none text-xs">{list.sort.dir === 'asc' ? '▲' : '▼'}</span>
                 )}
             </button>
         </span>

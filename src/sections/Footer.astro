@@ -6,27 +6,29 @@ const links = [
 ];
 ---
 
-<footer class="px-10 py-24 border-t border-zinc-800 bg-zinc-950">
-    <div class="flex items-start justify-between max-w-[80rem] gap-6 mx-auto">
+<footer class="py-16 border-t border-zinc-800 bg-zinc-950">
+    <div class="flex items-start justify-between max-w-7xl gap-6 mx-auto">
         <div>
-            <a class="footer__brand mb-1.5 font-medium font-inter text-base tracking-[-0.01em] no-underline text-zinc-100 transition-[color,text-shadow,opacity] duration-150" href="https://aephonics.com">aephonics</a>
-            <div class="text-sm text-zinc-400">&copy; 2026. All rights reserved.</div>
+            <a class="footer__brand mb-2 font-inter font-medium no-underline text-base tracking-[-0.01em] text-zinc-100 duration-150 transition-[color,text-shadow,opacity]" href="https://aephonics.com">aephonics</a>
+            <p class="text-sm text-zinc-400">&copy; 2026. All rights reserved.</p>
         </div>
-        <div class="flex gap-9 text-sm tracking-[0.04em]">
+        <dl class="flex gap-8 text-sm tracking-[0.04em]">
             {links.map(({ href, label, value }) => (
-                <div class="flex flex-col gap-1.5 font-mono">
-                    <span class="text-xs tracking-[0.2em] text-zinc-500">{label}</span>
-                    <a
-                        class="footer__link text-sm no-underline text-zinc-100 transition-[color,text-shadow,opacity] duration-150"
-                        href={href}
-                        rel="noopener noreferrer"
-                        target="_blank"
-                    >
-                        {value}
-                        <span class="sr-only"> (opens in new tab)</span>
-                    </a>
+                <div class="flex flex-col gap-2 font-mono">
+                    <dt class="text-xs tracking-[0.2em] text-zinc-500">{label}</dt>
+                    <dd>
+                        <a
+                            class="footer__link no-underline text-sm text-zinc-100 duration-150 transition-[color,text-shadow,opacity]"
+                            href={href}
+                            rel="noopener noreferrer"
+                            target="_blank"
+                        >
+                            {value}
+                            <span class="sr-only"> (opens in new tab)</span>
+                        </a>
+                    </dd>
                 </div>
             ))}
-        </div>
+        </dl>
     </div>
 </footer>

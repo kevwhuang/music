@@ -28,17 +28,18 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
         <meta charset="utf-8" />
         <meta content="width=device-width, initial-scale=1" name="viewport" />
         <title>{title}</title>
-        <meta content="Kevin Huang" name="author" />
         <meta content={description} name="description" />
+        <meta content="Kevin Huang" name="author" />
         <meta content="#09090b" name="theme-color" />
         <link href={canonicalUrl} rel="canonical" />
+        <link href="/apple-touch-icon.png" rel="apple-touch-icon" />
         <link href="/favicon.svg" rel="icon" type="image/svg+xml" />
         <meta content={title} property="og:title" />
         <meta content={description} property="og:description" />
-        <meta content={canonicalUrl} property="og:url" />
-        <meta content="website" property="og:type" />
         <meta content={`${Astro.site}og.png`} property="og:image" />
+        <meta content={canonicalUrl} property="og:url" />
         <meta content="Music" property="og:site_name" />
+        <meta content="website" property="og:type" />
         <meta content="summary_large_image" name="twitter:card" />
         <meta content={title} name="twitter:title" />
         <meta content={description} name="twitter:description" />

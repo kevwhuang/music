@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
+import { buildSlug } from '@lib/utils';
+
 type PersistedPlayer = Pick<PlayerState, 'collapsed' | 'highpass' | 'lowpass' | 'repeat' | 'volume'>;
 
 interface PlayerState {
@@ -29,9 +31,9 @@ const INITIAL: PlayerState = {
 function createPlayerStore() {
     const FILTER_Q = 0.707;
     const FILTER_SMOOTH = 0.015;
-    const HP_MAX = 5000;
+    const HP_MAX = 5_000;
     const HP_MIN = 20;
-    const LP_MAX = 20000;
+    const LP_MAX = 20_000;
     const LP_MIN = 200;
     const VU_SCALE = 2.5;
 
@@ -114,8 +116,8 @@ function createPlayerStore() {
                 const splitter = audioCtx.createChannelSplitter(2);
                 analyserL = audioCtx.createAnalyser();
                 analyserR = audioCtx.createAnalyser();
-                analyserL.fftSize = 1024;
-                analyserR.fftSize = 1024;
+                analyserL.fftSize = 1_024;
+                analyserR.fftSize = 1_024;
                 timeBufL = new Float32Array(analyserL.fftSize);
                 timeBufR = new Float32Array(analyserR.fftSize);
 
@@ -197,7 +199,9 @@ function createPlayerStore() {
             const element = store.getAudio();
             const currentSrc = element.src ? new URL(element.src).pathname : '';
 
-            if (currentSrc === track.audioUrl && store.state.trackId === track.id) {
+            const audioUrl = `/audio/${buildSlug(track.id, track.data.title)}.mp3`;
+
+            if (currentSrc === audioUrl && store.state.trackId === track.id) {
                 if (element.paused) {
                     element.play().catch(() => {});
                 } else {
@@ -209,7 +213,7 @@ function createPlayerStore() {
 
             element.pause();
             store.set({ duration: track.data.duration, playing: true, position: 0, trackId: track.id });
-            element.src = track.audioUrl;
+            element.src = audioUrl;
 
             const onReady = () => {
                 element.removeEventListener('canplay', onReady);
@@ -297,8 +301,8 @@ function createPlayerStore() {
 
 const SERVER_SNAPSHOT: PlayerState = { ...INITIAL };
 
-export const PLAYER = createPlayerStore();
+export const playerStore = createPlayerStore();
 
 export function usePlayer(): PlayerState {
-    return useSyncExternalStore(PLAYER.subscribe, PLAYER.get, () => SERVER_SNAPSHOT);
+    return useSyncExternalStore(playerStore.subscribe, playerStore.get, () => SERVER_SNAPSHOT);
 }

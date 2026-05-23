@@ -3,8 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { z } from 'astro/zod';
 
-import { buildSlug } from '@lib/utils';
-
 import type { Loader } from 'astro/loaders';
 
 interface RawTrack {
@@ -57,16 +55,12 @@ function tracksLoader(): Loader {
                     const filePath = path.join(dir, file);
                     const raw: RawTrack = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
                     const id = file.replace('.json', '').toUpperCase();
-                    const slug = buildSlug(id, raw.data.title);
-
                     store.set({
                         data: {
-                            audioUrl: `/audio/${slug}.mp3`,
                             category: categoryFromId(id),
                             data: raw.data,
                             flags: raw.flags,
                             peaks: allPeaks[id] ?? [],
-                            slug,
                         },
                         digest: generateDigest(JSON.stringify(raw)),
                         filePath,
@@ -80,7 +74,6 @@ function tracksLoader(): Loader {
         },
         name: 'tracks-loader',
         schema: z.object({
-            audioUrl: z.string(),
             category: z.enum(CATEGORIES),
             data: z.object({
                 bpm: z.number(),
@@ -97,7 +90,6 @@ function tracksLoader(): Loader {
                 star: z.boolean(),
             }),
             peaks: z.array(z.number()),
-            slug: z.string(),
         }),
     };
 }

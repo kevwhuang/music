@@ -11,18 +11,16 @@ const tracks = entries
     .map(entry => ({ ...entry.data, id: entry.id }))
     .sort((a, b) => a.id.localeCompare(b.id));
 const catalogTracks = tracks.map(track => ({
-    audioUrl: track.audioUrl,
     category: track.category,
     data: track.data,
     flags: track.flags,
     id: track.id,
     peaks: [] as number[],
-    slug: track.slug,
 }));
 ---
 
 <Layout
-    description="Browse original music, sessions, and productions from Aephonics."
+    description="Browse music, sessions, and productions from Aephonics."
     title="Music"
 >
     <Player client:only="react" tracks={tracks} />

@@ -17,41 +17,41 @@ const stats = [
 ---
 
 <section
-    class="hero px-10 py-48 border-b border-zinc-800"
-    aria-label="Hero"
+    class="hero py-32 border-b border-zinc-800"
+    aria-label="Introduction"
 >
-    <div class="max-w-[80rem] mx-auto">
-        <h1 class="hero__title mb-16 font-semibold text-9xl tracking-[-0.05em] leading-none font-inter text-zinc-100" aria-label="aephonics from concept to master.">
+    <div class="max-w-7xl mx-auto">
+        <h1 class="hero__title mb-12 font-inter font-semibold leading-none text-9xl tracking-[-0.05em] text-zinc-100" aria-label="aephonics from concept to master.">
             <span class="hero__line opacity-0" aria-hidden="true">aephonics</span>
             <br />
             <span class="hero__line text-zinc-400 opacity-0" aria-hidden="true">from concept</span>
             <br />
-            <span class="hero__line text-[var(--color-orange-80)] opacity-0" aria-hidden="true">to master.</span>
+            <span class="hero__line text-orange-80 opacity-0" aria-hidden="true">to master.</span>
         </h1>
-        <p class="hero__subtitle font-mono text-xl tracking-[0.2em] uppercase leading-relaxed text-zinc-300 opacity-0">
-            Producer and engineer. A decade of craft. 5M+ streams.<br />
+        <p class="hero__subtitle mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] uppercase text-zinc-300 opacity-0">
+            Producer and engineer. A decade of craft. <span class="text-orange-80">5M+ streams.</span><br />
             Minimal setup. Maximum signal. Untethered from genre.<br />
-            Based in Austin. Open to collab.
+            Based in <span class="text-orange-80">Austin.</span> Open to collab.
         </p>
-        <dl
-            class="hero__stats relative grid grid-cols-4 gap-8 mt-24 p-7 border border-zinc-800 bg-zinc-800 opacity-0"
-        >
-            <div class="hero__ticker absolute -top-9 right-7 grid justify-items-end w-fit h-7 overflow-hidden" aria-hidden="true">
+        <div class="hero__stats relative opacity-0">
+            <div class="hero__ticker -top-9 absolute grid justify-items-end overflow-hidden right-6 h-7 w-fit" aria-hidden="true">
                 {TICKER.map(word => (
-                    <span class="hero__ticker-word col-start-1 row-start-1 font-mono text-base tracking-[0.2em] text-zinc-600 opacity-0">
+                    <span class="hero__ticker-word col-start-1 row-start-1 font-mono text-base tracking-[0.2em] text-zinc-500 opacity-0">
                         {word}
                     </span>
                 ))}
             </div>
-            {stats.map(({ accent, count, label }, i) => (
-                <div class={`pl-[1.125rem] ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
-                    <dt class="mb-2.5 font-mono text-xs tracking-[0.2em] text-zinc-400">{label}</dt>
-                    <dd class:list={['hero__stat-count font-medium text-4xl tracking-[-0.025em] leading-none font-inter', accent ? 'text-[var(--color-orange-80)]' : 'text-zinc-100']}>
-                        {count}
-                    </dd>
-                </div>
-            ))}
-        </dl>
+            <dl class="grid grid-cols-4 gap-8 p-6 border border-zinc-800 bg-zinc-800">
+                {stats.map(({ accent, count, label }, i) => (
+                    <div class={`pl-5 ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
+                        <dt class="mb-2 font-mono text-xs tracking-[0.2em] text-zinc-400">{label}</dt>
+                        <dd class:list={['hero__stat-count font-inter font-medium leading-none text-4xl tracking-[-0.025em]', accent ? 'text-orange-80' : 'text-zinc-100']}>
+                            {count}
+                        </dd>
+                    </div>
+                ))}
+            </dl>
+        </div>
     </div>
 </section>
 

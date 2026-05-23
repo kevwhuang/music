@@ -3,6 +3,7 @@
     "exclude": [
         ".netlify",
         "dist",
+        "netlify",
         "node_modules",
         "tests"
     ],

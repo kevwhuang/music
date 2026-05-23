@@ -1,166 +1,117 @@
 ---
-description: Enforce web project standards across all categories
+description: Enforce web project standards
 name: audit-web
 user-invocable: true
 ---
 
-Audit the web project against the checklist below. Skip paths in `.gitignore`.
+- Audit all project files
+- Skip paths in `.gitignore`
 
-## Code Quality
+## Protocol
 
-1. TypeScript strict mode with zero type errors
-2. ESLint passing with zero errors
-3. No unsafe type casts or type holes
-4. No dead code or unused dependencies
-5. No `console.log` or `debugger` in production
-6. HTML valid with no parsing errors
-7. Path aliases configured for imports
+- Report issues in a table with columns: ID, File, Lines, Issue
+- No editorializing
+- Fix only with user approval
 
 ## Security
 
-1. Secrets excluded from version control and client bundles
-2. Input validation and sanitization on all user data
-3. XSS prevention with output encoding and CSP headers
-4. CSRF protection on state-changing requests
-5. Security headers: X-Frame-Options, Referrer-Policy, HSTS
-6. Dependency vulnerabilities scanned
-7. Rate limiting on API endpoints
+- HTTPS enforced
+- Secrets excluded from version control and client bundles
+- Input validation and sanitization on all user data
+- XSS prevention with output encoding and CSP headers
+- CSRF protection on state-changing requests
+- Security headers: X-Frame-Options, Referrer-Policy, HSTS
+- Cookies use `HttpOnly`, `Secure`, and `SameSite`
+- CORS configured for allowed origins
+- Dependency vulnerabilities scanned
+- Rate limiting on API endpoints
+- Subresource integrity for external scripts
 
 ## Accessibility
 
-1. Semantic HTML with logical heading hierarchy
-2. Keyboard navigation with visible focus indicators
-3. Color contrast meets WCAG AA: 4.5:1 for text, 3:1 for UI
-4. Images have descriptive alt text or are marked decorative
-5. Form inputs have associated labels and error announcements
-6. ARIA labels and roles on elements without visible text
-7. No information conveyed by color alone
-8. Decorative elements hidden from assistive technology
-9. Reduced motion respected via `prefers-reduced-motion`
-10. Page functional at 200% zoom
+- `lang` attribute on `<html>`
+- Unique and descriptive page titles
+- Skip navigation link
+- Semantic HTML with logical heading hierarchy
+- Focus order matches visual order
+- Keyboard navigation with visible focus indicators
+- Color contrast meets WCAG AA: 4.5:1 for text, 3:1 for UI
+- Alt text on all images or marked decorative
+- Form inputs have associated labels
+- Form errors associated via `aria-describedby`
+- ARIA labels and roles on elements without visible text
+- No information conveyed by color alone
+- Decorative elements hidden from assistive technology
+- Reduced motion respected via `prefers-reduced-motion`
+- Page functional at 200% zoom
 
 ## Performance
 
-1. Core Web Vitals: LCP < 2.5s, INP < 200ms, CLS < 0.1
-2. Lighthouse performance score 90+ on mobile
-3. No render-blocking resources in critical path
-4. JavaScript bundle minimized with tree shaking and code splitting
-5. Images optimized: modern formats, srcset, lazy loading, dimensions set
-6. Critical CSS inlined, non-critical deferred
-7. Fonts preloaded with font-display swap
-8. Assets compressed and cached
-9. Third-party scripts async or deferred
-10. No unused dependencies in production bundle
-11. HTTP requests minimized and batched
-12. Preconnect hints for third-party origins
-
-## Testing
-
-1. All tests passing in CI before merge
-2. E2E tests cover critical user flows
-3. Unit tests cover critical functions and utilities
-4. Integration tests verify module interactions
-5. Accessibility tests automated
-
-## Error Handling
-
-1. Error boundaries catch component failures
-2. 404 and error pages styled and helpful
-3. API errors show user-friendly messages
-4. Graceful degradation when features unavailable
-5. Network failures trigger retry logic
-6. Fallback UI for failed component loads
-7. Errors logged to monitoring service
+- Core Web Vitals: LCP < 2.5s, INP < 200ms, CLS < 0.1
+- Lighthouse score 90+ on mobile
+- No render-blocking resources in critical path
+- Code split by route
+- JavaScript bundle minimized with tree shaking
+- Images optimized: modern formats, `srcset`, lazy loading, dimensions set
+- Critical CSS inlined, non-critical deferred
+- Fonts preloaded with `font-display: swap`
+- Assets compressed and cached via CDN
+- Third-party scripts async or deferred
+- Preconnect and DNS prefetch for third-party origins
 
 ## Responsiveness
 
-1. No horizontal scroll at any viewport
-2. Mobile layout functional from 320px
-3. Navigation adapts per breakpoint
-4. Touch targets minimum 44x44px
-5. Typography scales with readable line lengths
-6. Large screens capped with max-width container
-7. Tables scroll or stack on mobile
+- No horizontal scroll at any viewport
+- Mobile layout functional from 320px
+- Navigation adapts per breakpoint
+- Touch targets minimum 44x44px
+- Typography scales with readable line lengths
+- Large screens capped with max-width container
+- Tables scroll or stack on mobile
 
 ## Visuals
 
-1. Typography hierarchy consistent
-2. Hover and focus states visible on all interactive elements
-3. Transitions and animations use shared durations and easing
-4. Spacing uses design tokens
-5. UI components visually consistent across pages
-6. Icons consistent in style and sizing
-7. Loading and skeleton states for async content
-8. Empty and error states designed
-9. Visual alignment follows grid rhythm
+- Typography hierarchy consistent
+- Hover, focus, active, and disabled states on all interactive elements
+- Shared transition durations and easing
+- Spacing from design tokens
+- UI consistent across pages
+- Icons match in style and sizing
+- `prefers-color-scheme` respected if dark mode supported
+- Loading and skeleton states for async content
+- Empty and error states designed
 
 ## Interactivity
 
-1. Interactive elements respond immediately
-2. Focus trapped in modals and restored on close
-3. Disabled states prevent interaction and appear muted
-4. Form inputs validate inline with error messages
-5. Scroll behavior smooth with anchor offsets
-6. Double-submit prevented on forms
+- Interactive elements respond immediately
+- Focus trapped in modals and restored on close
+- Disabled states prevent interaction and appear muted
+- Form inputs validate inline with error messages
+- Smooth scroll with anchor offsets
+- Double-submit prevented on forms
+- Browser history navigation functional
 
-## SEO
+## Errors
 
-1. Meta title and description unique per page
-2. Canonical URLs prevent duplicate content
-3. Open Graph tags for social sharing
-4. Structured data with JSON-LD
-5. Descriptive URL structure
-6. XML sitemap submitted and updated
-7. Robots.txt configured
-8. Favicon in multiple formats
-
-## Project Structure
-
-1. Folder structure with separation of concerns
-2. File naming convention consistent throughout
-3. .gitignore excludes build artifacts and dependencies
-4. Package.json scripts documented
-5. README with setup and usage instructions
-6. Environment example file provided
-
-## Compatibility
-
-1. Cross-browser: Chrome, Firefox, Safari, Edge
-2. Mobile: iOS and Android
-3. Input methods: mouse, touch, keyboard
-4. Progressive enhancement without JS
-5. High DPI display support
+- Error boundaries catch component failures
+- Errors logged to monitoring service
+- 404 and error pages styled and helpful
+- API errors show user-friendly messages
+- Graceful degradation when features unavailable
+- Network failures trigger retry logic
+- Fallback UI for failed component loads
+- Offline fallback page
 
 ## Content
 
-1. All links functional
-2. No placeholder text or dummy data
-3. Spelling, grammar, and punctuation correct
-4. Dates and numbers formatted for locale
+- All links functional
+- Unique and descriptive headings
+- No placeholder text or dummy data
+- Spelling, grammar, and punctuation correct
+- Dates and numbers formatted for locale
 
-## DevOps
+## Compatibility
 
-1. CI/CD pipeline passes all checks before deploy
-2. Monitoring and alerting for errors
-3. Environment variables configured per deploy context
-4. Staging environment mirrors production
-5. Smoke tests run post-deploy
-6. Rollback mechanism tested
-7. Logs aggregated and searchable
-
-## Legal
-
-1. Privacy policy present and linked
-2. Cookie consent with opt-in controls
-3. Third-party tracking disclosed
-4. Copyright notice current
-5. Licensed assets attributed
-
-## Rules
-
-- Only report files with issues
-- Report issues in a table with columns: File, Lines, Issue
-- Report only. No recommendations, no editorializing, no offering to fix.
-- Get user approval before making any fixes
-- No logic changes. Report and flag only.
-- Run `bun run lint` after all changes are applied
+- Cross-browser: Chrome, Firefox, Safari, Edge
+- Mobile: iOS and Android
+- Input methods: mouse, touch, keyboard

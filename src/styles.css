@@ -1,3 +1,15 @@
+.catalog__body > .catalog__row:not(.catalog__row--disabled):hover {
+    background: var(--color-white-20);
+}
+
+.catalog__body > .catalog__row:not(.catalog__row--disabled):not(.catalog__row--playing):active:not(:has(.catalog__download:active)) {
+    background: var(--color-white-40);
+}
+
+.catalog__body > .catalog__row--playing:not(.catalog__row--disabled):hover {
+    background: var(--color-orange-40);
+}
+
 .catalog__category--active {
     background: var(--color-orange-80);
     color: var(--color-white);
@@ -48,6 +60,10 @@
     opacity: 0.7;
 }
 
+.catalog__grid {
+    grid-template-columns: 36px auto minmax(0, 1fr) auto auto;
+}
+
 .catalog__page--active {
     background: var(--color-orange-80);
     border-color: var(--color-orange-80);
@@ -69,10 +85,6 @@
     opacity: 0.4;
 }
 
-.catalog__grid {
-    grid-template-columns: 36px auto minmax(0, 1fr) auto auto;
-}
-
 .catalog__row {
     grid-column: 1 / -1;
     grid-template-columns: subgrid;
@@ -85,18 +97,6 @@
 
 .catalog__row--playing {
     background: var(--color-orange-20);
-}
-
-.catalog__body > .catalog__row:not(.catalog__row--disabled):hover {
-    background: var(--color-white-20);
-}
-
-.catalog__body > .catalog__row:not(.catalog__row--disabled):not(.catalog__row--playing):active:not(:has(.catalog__download:active)) {
-    background: var(--color-white-40);
-}
-
-.catalog__body > .catalog__row--playing:not(.catalog__row--disabled):hover {
-    background: var(--color-orange-40);
 }
 
 .catalog__search:focus-visible {
@@ -167,7 +167,6 @@
 
 .modal__overlay {
     animation: modal__fade-in 0.2s ease;
-    backdrop-filter: blur(8px);
     background: var(--color-black-60);
 }
 
@@ -192,11 +191,10 @@
 .player__counter {
     background: var(--color-zinc-950);
     border: 1px solid var(--color-cream-20);
-    font-variant-numeric: tabular-nums;
 }
 
 .player__expandable {
-    max-height: 150px;
+    max-height: 160px;
     opacity: 1;
     overflow: hidden;
     transition: max-height 0.3s ease, opacity 0.3s ease;
@@ -209,8 +207,6 @@
 
 .player__fader-fill {
     background: linear-gradient(180deg, var(--color-orange-80), var(--color-orange-40));
-    opacity: 0.35;
-    pointer-events: none;
 }
 
 .player__fader-line {
@@ -221,7 +217,6 @@
     background: var(--color-cream);
     border: 1px solid var(--color-orange-80);
     box-shadow: 0 1px 3px var(--color-black-40);
-    pointer-events: none;
 }
 
 .player__fader-track {
@@ -235,27 +230,19 @@
     border: 1px solid var(--color-orange-40);
     color: var(--color-orange-80);
     font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
-    white-space: nowrap;
 }
 
 .player__playhead {
     background: var(--color-cream);
     box-shadow: 0 0 6px var(--color-cream-60), 0 0 12px var(--color-orange-80);
-    pointer-events: none;
 }
 
 .player__progress {
     background: var(--color-zinc-950);
-    cursor: pointer;
-    height: 5px;
 }
 
 .player__progress-fill {
     background: var(--color-orange-80);
-    height: 100%;
-    pointer-events: none;
 }
 
 .player__reel {
@@ -274,14 +261,11 @@
 
 .player__tick {
     background: var(--color-cream-40);
-    pointer-events: none;
 }
 
 .player__tick-label {
     color: var(--color-cream-60);
     font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;
 }
 
 .player__transport {
@@ -312,7 +296,6 @@
 
 .player__waveform {
     background: var(--color-black);
-    user-select: none;
 }
 
 .player__waveform-center {

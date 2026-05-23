@@ -1,20 +1,20 @@
 import { useRef, useState } from 'react';
 
-import { HeartIcon } from '@components/HeartIcon';
-import { PLAYER } from '@lib/store';
-import { StarIcon } from '@components/StarIcon';
+import { IconHeart } from '@components/IconHeart';
+import { IconStar } from '@components/IconStar';
+import { playerStore } from '@lib/store';
 import { buildSlug, formatDuration } from '@lib/utils';
 
 const BOUNCE_DURATION = 0.6;
 const BOUNCE_STAGGER = 0.1;
-const DOWNLOAD_COOLDOWN = 3000;
+const DOWNLOAD_COOLDOWN = 3_000;
 
 function DownloadButton({ children, disabled, onClick }: {
     children: React.ReactNode; disabled?: boolean; onClick: () => void;
 }) {
     return (
         <button
-            className="catalog__download px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-xs tracking-[0.2em] font-mono bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 cursor-pointer"
+            className="catalog__download px-3 py-2 border border-zinc-700 rounded-sm font-medium text-xs tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
             disabled={disabled}
             onClick={onClick}
         >
@@ -32,7 +32,7 @@ function DownloadLink({ children, disabled, href }: {
     if (disabled || cooldown) {
         return (
             <span
-                className="inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-xs tracking-[0.2em] no-underline font-mono bg-transparent text-zinc-400 opacity-40 cursor-not-allowed"
+                className="inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 opacity-40 cursor-not-allowed"
             >
                 {children}
             </span>
@@ -41,7 +41,7 @@ function DownloadLink({ children, disabled, href }: {
 
     return (
         <a
-            className="catalog__download inline-block px-3.5 py-2 rounded-sm border border-zinc-700 font-medium text-xs tracking-[0.2em] no-underline font-mono bg-transparent text-zinc-400 transition-[background,border-color,color,opacity] duration-150 cursor-pointer"
+            className="catalog__download inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
             download
             href={href}
             onClick={() => {
@@ -57,10 +57,10 @@ function DownloadLink({ children, disabled, href }: {
 
 function PlayingDots({ paused }: { paused: boolean }) {
     return (
-        <div className="flex items-center gap-0.5 h-3.5">
+        <div className="flex items-center h-3.5 gap-0.5">
             {[0, 1, 2, 3].map(i => (
                 <div
-                    className="w-0.5 h-3.5 bg-[var(--color-orange-80)]"
+                    className="h-3.5 w-0.5 bg-orange-80"
                     key={i}
                     style={{ animation: `player__vu-bounce ${BOUNCE_DURATION}s ease-in-out ${i * BOUNCE_STAGGER}s infinite`, animationPlayState: paused ? 'paused' : 'running', transformOrigin: 'center' }}
                 />
@@ -82,7 +82,7 @@ export function CatalogRow({ index, isActive, isPlaying, pinModal, track }: {
     const slug = buildSlug(track.id, track.data.title);
 
     function handlePlay() {
-        if (!noMaster) PLAYER.load(track);
+        if (!noMaster) playerStore.load(track);
     }
 
     function handleClick() {
@@ -99,7 +99,7 @@ export function CatalogRow({ index, isActive, isPlaying, pinModal, track }: {
 
     return (
         <div
-            className={`catalog__row ${isActive ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''} grid items-center gap-6 px-5 py-6 text-base transition-[background] duration-150 delay-[10ms] ${noMaster ? '' : 'cursor-pointer'}`}
+            className={`catalog__row ${isActive ? 'catalog__row--playing' : ''} ${noMaster ? 'catalog__row--disabled' : ''} grid items-center gap-6 px-5 py-6 text-base delay-[10ms] duration-150 transition-[background] ${noMaster ? '' : 'cursor-pointer'}`}
             onClick={noMaster ? undefined : handleClick}
             onKeyDown={noMaster ? undefined : handleKeyDown}
             role="listitem"
@@ -109,24 +109,24 @@ export function CatalogRow({ index, isActive, isPlaying, pinModal, track }: {
             <div className="flex items-center justify-center">
                 {isActive && <PlayingDots paused={!isPlaying} />}
                 {!isActive && track.flags.star && (
-                    <span className="text-[var(--color-gold)]">
-                        <StarIcon />
+                    <span className="text-gold">
+                        <IconStar />
                         <span className="sr-only">Starred</span>
                     </span>
                 )}
                 {!isActive && !track.flags.star && track.flags.heart && (
-                    <span className="text-[var(--color-rose)]">
-                        <HeartIcon />
+                    <span className="text-rose">
+                        <IconHeart />
                         <span className="sr-only">Hearted</span>
                     </span>
                 )}
             </div>
-            <span className="text-sm tracking-[0.04em] tabular-nums text-zinc-400">{track.id}</span>
-            <div className="flex flex-col min-w-0 gap-[5px]">
-                <div className={`catalog__track font-medium text-base truncate leading-tight font-inter ${track.data.title ? 'text-zinc-100' : 'text-zinc-500 italic'}`}>
+            <span className="tabular-nums text-sm tracking-[0.04em] text-zinc-400">{track.id}</span>
+            <div className="flex flex-col min-w-0 gap-1">
+                <div className={`catalog__track font-inter font-medium leading-tight text-base truncate ${track.data.title ? 'text-zinc-100' : 'text-zinc-500 italic'}`}>
                     {track.data.title || ' '}
                 </div>
-                <div className="min-h-4 font-mono text-xs tracking-[0.04em] text-zinc-400">
+                <div className="min-h-4 text-xs tracking-[0.04em] text-zinc-400">
                     {[
                         track.data.year > 0 && String(track.data.year),
                         track.data.bpm > 0 && `BPM ${track.data.bpm}${track.data.tempo ? ` ${track.data.tempo}` : ''}`,
@@ -134,8 +134,8 @@ export function CatalogRow({ index, isActive, isPlaying, pinModal, track }: {
                     ].filter(Boolean).join(' │ ')}
                 </div>
             </div>
-            <span className="text-sm tabular-nums text-right text-zinc-400">{track.data.title ? formatDuration(track.data.duration) : ''}</span>
-            <div className="flex justify-start gap-1.5 pl-4" aria-label="Download options" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="toolbar" tabIndex={-1}>
+            <span className="tabular-nums text-right text-sm text-zinc-400">{track.data.title ? formatDuration(track.data.duration) : ''}</span>
+            <div className="flex justify-start gap-2 pl-4" aria-label="Download options" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="toolbar" tabIndex={-1}>
                 <DownloadLink disabled={!hasMaster} href={`/audio/${slug}.mp3`}>MP3</DownloadLink>
                 <DownloadButton disabled={!hasMaster} onClick={() => pinModal.open(track, 'master')}>WAV</DownloadButton>
                 <DownloadButton disabled={!hasMixdown} onClick={() => { if (hasMixdown) pinModal.open(track, 'mixdown'); }}>MIX</DownloadButton>

@@ -18,7 +18,6 @@
     --color-red-20: #b8524a33;
     --color-rose: #c47888;
     --color-sage: #8aaa72;
-    --color-sage-40: #8aaa7266;
     --color-transparent: #00000000;
     --color-white: #ffffff;
     --color-white-20: #ffffff33;
@@ -37,6 +36,10 @@
     --font-sans: 'Geist', system-ui, sans-serif;
 }
 
+body {
+    animation: body__fade-in 0.5s ease forwards;
+}
+
 :focus {
     outline: none;
 }
@@ -47,10 +50,6 @@
     outline-offset: 2px;
 }
 
-body {
-    animation: body__fade-in 0.5s ease forwards;
-}
-
 [data-scroll] {
     opacity: 0;
 }
@@ -59,10 +58,10 @@ body {
     *,
     *::before,
     *::after {
-        animation-duration: 0.01ms !important;
+        animation-duration: 0.01s !important;
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
-        transition-duration: 0.01ms !important;
+        transition-duration: 0.01s !important;
     }
 }
 

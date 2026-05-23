@@ -8,7 +8,6 @@ interface PinModalActions {
 }
 
 interface Track {
-    audioUrl: string;
     category: 'music' | 'productions' | 'sessions';
     data: {
         bpm: number;
@@ -26,5 +25,4 @@ interface Track {
     };
     id: string;
     peaks: number[];
-    slug: string;
 }

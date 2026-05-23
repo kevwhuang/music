@@ -1,62 +1,72 @@
 ---
-description: Enforce JavaScript and TypeScript conventions in scripts and Astro files
+description: Enforce JS and TS conventions
 name: audit-js
 user-invocable: true
 ---
 
-Audit `.js`, `.ts`, `.tsx` files and frontmatter and `<script>` blocks in `.astro` files. Skip paths in `.gitignore`.
+- Audit `.js`, `.ts`, `.tsx` files, frontmatter, and `<script>` blocks in `.astro` files
+- Skip paths in `.gitignore`
+
+## Protocol
+
+- Report issues in a table with columns: ID, File, Lines, Issue
+- No editorializing
+- Fix only with user approval
 
 ## Ordering
 
-Sort all identifiers lexicographically, case-sensitive, uppercase before lowercase. This applies to variable declarations, object properties, interface properties, type properties, destructured bindings, and nested properties at all levels.
+Sort all identifiers lexicographically at all levels: declarations, object properties, interface properties, type properties, destructured bindings, and nested properties.
 
 Reorder top-level declarations in this sequence:
 
-1. **Imports**: three groups separated by blank lines: external, internal, types. Sort by binding name, ignoring braces. Sort destructured bindings within braces.
-2. **Types and interfaces**: types before interfaces. Sort properties.
-3. **Constants**: static values known at definition time
-4. **Variables**: derived or computed state
-5. **Helpers**: internal utility functions
-6. **Main logic**: primary functions and classes
-7. **Exports**: inline named exports at declaration. No `export default` or `export { }` blocks unless required by framework.
-8. **Colocation**: single-use types and functions stay local. Multi-use types go in `env.d.ts`, multi-use functions in `lib/`.
+1. Imports
+2. Types and interfaces
+3. Constants
+4. Variables
+5. Helpers
+6. Main logic
+7. Exports
+
+- Imports in three groups separated by blank lines: external, internal, types. Within each group, side-effect imports first, then default, then named. Each group sorted lexicographically.
+- Types before interfaces
+- Constants are static values known at definition time
+- Inline named exports at declaration
+- Single-use types and functions stay local. Multi-use types in `env.d.ts`, multi-use functions in `lib/`.
 
 ## Tests
 
-Order test cases by rendering order, not alphabetically.
+- Order test cases by rendering order, not alphabetically
 
 ## Style
 
-- No `console.log` or `debugger`
-- No comments
-- No `.then()` chains. Use `async`/`await`.
-- Descriptive names. Flag ambiguous or abbreviated identifiers.
-- Prefer `const` over `let` when never reassigned
-- Prefer `function` declarations over arrows unless inline callbacks or `this`-binding
-- `for` and `while` loops always use braces and multiple lines
-- Avoid ternaries unless they fit on one line
-- 4-space indentation. Indent `<script>` content inside the tag in `.astro` files.
+- Delete `console.log` and `debugger`
+- Delete comments
+- `async`/`await` over `.then()` chains
+- Descriptive names, flag ambiguous or abbreviated identifiers
+- `const` over `let` when never reassigned
+- `function` declarations over arrows unless inline callbacks
+- Functional components only, class components only for error boundaries
+- Braces and multiple lines for `for` and `while` loops
+- Ternaries only if they fit on one line
+- 4-space indentation
+- Indent `<script>` content in `.astro` files
 - Blank lines around block elements: functions, if/else, for/while, try/catch, classes
-- Blank lines between logical groups but not between consecutive declarations in the same category
-- Consecutive single-line guards may stay grouped. Multi-line if blocks always need surrounding blank lines.
+- Blank lines between logical groups, not between consecutive declarations
+- Single-line guards may stay grouped, multi-line if blocks need surrounding blank lines
 
 ## Safety
 
-- No unchecked nullable access. Type narrowing must carry into closures.
-- No swallowed errors. Empty `catch` blocks must log or re-throw.
+- Type narrowing must carry into closures
+- Empty `catch` blocks must log or re-throw
 - Never mutate parameters
 - Strict equality only: `===` and `!==`
-- No magic numbers. Extract to named constants.
+- Extract magic numbers to named constants
+- Numeric separators for 4+ digits
 
 ## Astro
 
-At most one `<script>` block per `.astro` file.
+- One `<script>` block per `.astro` file
 
-## Rules
+## Scope
 
-- Only report files with issues
-- Report issues in a table with columns: File, Lines, Issue
-- Report only. No recommendations, no editorializing, no offering to fix.
-- Get user approval before making any fixes
-- No logic changes. Reorder, rename, and reformat only.
-- Run `bun run lint` after all changes are applied
+- Reorder, rename, and reformat only

@@ -8,7 +8,7 @@ import { IconChevron } from '@components/IconChevron';
 import { IconHeart } from '@components/IconHeart';
 import { IconSearch } from '@components/IconSearch';
 import { IconStar } from '@components/IconStar';
-import { buildSlug, categoryLabel } from '@lib/utils';
+import { buildSlug, categoryLabel, formatDetails } from '@lib/utils';
 import { usePlayer } from '@lib/store';
 
 type TrackListState = ReturnType<typeof useTrackList>;
@@ -41,6 +41,7 @@ const ENTRANCE_Y = 30;
 const FOCUS_DELAY = 50;
 const PAGE_ADJACENT = 2;
 const PAGE_SIZE = 50;
+const PIN_MIN_DELAY = 500;
 const PIN_SUCCESS_DELAY = 3_000;
 const SORT_FALLBACK = 9_999;
 
@@ -203,6 +204,7 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
             const rect = trackRef.current.getBoundingClientRect();
             const ratio = (ev.clientX - rect.left) / rect.width;
             const bpm = Math.round(BPM_MIN + Math.max(0, Math.min(1, ratio)) * (BPM_MAX - BPM_MIN));
+
             if (which === 'lo') onChange([Math.min(bpm, high - 1), high]);
             else onChange([low, Math.max(bpm, low + 1)]);
         };
@@ -221,14 +223,20 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
         <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between text-xs tracking-[0.2em] text-zinc-400">
                 <span>BPM</span>
-                <span className="tabular-nums tracking-[0.04em]" style={{ color: isDefault ? 'var(--color-white-60)' : 'var(--color-orange-80)' }}>
+                <span
+                    className="tabular-nums tracking-[0.04em]"
+                    style={{ color: isDefault ? 'var(--color-white-60)' : 'var(--color-orange-80)' }}
+                >
                     {low}
                     –
                     {high}
                 </span>
             </div>
             <div className="flex items-center relative h-12">
-                <div className="relative h-1.5 w-full rounded-sm bg-zinc-900 select-none" ref={trackRef}>
+                <div
+                    className="relative h-1.5 w-full rounded-sm bg-zinc-900 select-none"
+                    ref={trackRef}
+                >
                     <div className="absolute bottom-0 top-0 rounded-sm bg-orange-80" style={{ left: `${percentLow}%`, right: `${100 - percentHigh}%` }} />
                     {([['lo', percentLow], ['hi', percentHigh]] as const).map(([k, p]) => (
                         <div
@@ -260,11 +268,11 @@ function BPMSlider({ value, onChange }: { value: [number, number]; onChange: (v:
 }
 
 function CatalogInner({ tracks }: { tracks: Track[] }) {
-    const trackList = useTrackList(tracks);
+    const headingRef = useRef<HTMLDivElement>(null);
     const pinModal = usePinModal();
     const player = usePlayer();
-    const headingRef = useRef<HTMLDivElement>(null);
     const sectionRef = useRef<HTMLElement>(null);
+    const trackList = useTrackList(tracks);
 
     useEffect(() => {
         if (!sectionRef.current) return;
@@ -289,39 +297,81 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
     }
 
     return (
-        <section className="py-24 font-mono text-base" aria-label="Catalog" ref={sectionRef}>
+        <section
+            className="py-24 font-mono text-base"
+            aria-label="Catalog"
+            ref={sectionRef}
+        >
             <div className="max-w-7xl mx-auto">
-                <div className="flex items-baseline justify-between gap-6 mb-6 px-5" ref={headingRef}>
-                    <h2 className="catalog__heading m-0 font-inter font-medium text-4xl tracking-[-0.025em]">
-                        Catalog
-                    </h2>
-                    <span className="text-xl tracking-[0.02em] text-zinc-400" aria-live="polite">
+                <div
+                    className="flex items-baseline justify-between gap-6 mb-6 px-5"
+                    ref={headingRef}
+                >
+                    <h2 className="catalog__heading m-0 font-inter font-medium text-4xl tracking-[-0.025em]">Catalog</h2>
+                    <span
+                        className="text-xl tracking-[0.02em] text-zinc-400"
+                        aria-live="polite"
+                    >
                         {trackList.total}
                         {' of '}
                         {tracks.length}
                     </span>
                 </div>
-                <Filters list={trackList} tracks={tracks} />
-                <div className="catalog__grid grid mb-6" aria-label="Track catalog" role="list">
+                <Filters
+                    list={trackList}
+                    tracks={tracks}
+                />
+                <div
+                    className="catalog__grid grid mb-6"
+                    aria-label="Track catalog"
+                    role="list"
+                >
                     <div className="catalog__row grid items-center gap-6 px-5 py-3 border border-zinc-800 text-xs tracking-[0.2em] bg-zinc-900 text-zinc-400">
                         <span aria-hidden="true" />
-                        <SortHeader field="id" label="ID" list={trackList} />
-                        <SortHeader field="title" label="TITLE" list={trackList} />
-                        <SortHeader align="right" field="duration" label="LENGTH" list={trackList} />
+                        <SortHeader
+                            field="id"
+                            label="ID"
+                            list={trackList}
+                        />
+                        <SortHeader
+                            field="title"
+                            label="TITLE"
+                            list={trackList}
+                        />
+                        <SortHeader
+                            align="right"
+                            field="duration"
+                            label="LENGTH"
+                            list={trackList}
+                        />
                         <span className="pl-4 text-left">DOWNLOAD</span>
                     </div>
                     <div className="catalog__body col-span-full grid grid-cols-subgrid border border-t-0 border-zinc-800">
                         {trackList.visible.length === 0 && (
-                            <div className="col-span-full p-16 text-base text-center text-zinc-400" aria-live="polite" role="status">
+                            <div
+                                className="col-span-full p-16 text-base text-center text-zinc-400"
+                                aria-live="polite"
+                                role="status"
+                            >
                                 No tracks match the current filters.
                             </div>
                         )}
                         {trackList.visible.length > 0 && trackList.visible.map((track, i) => (
-                            <CatalogRow index={i} isActive={player.trackId === track.id} isPlaying={player.trackId === track.id && player.playing} key={track.id} pinModal={pinModal} track={track} />
+                            <CatalogRow
+                                index={i}
+                                isActive={player.trackId === track.id}
+                                isPlaying={player.trackId === track.id && player.playing}
+                                key={track.id}
+                                pinModal={pinModal}
+                                track={track}
+                            />
                         ))}
                     </div>
                 </div>
-                <Pagination list={trackList} setPage={handlePageChange} />
+                <Pagination
+                    list={trackList}
+                    setPage={handlePageChange}
+                />
             </div>
         </section>
     );
@@ -385,7 +435,7 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     />
                     {list.query && (
                         <button
-                            className="active:opacity-70 hover:opacity-80 border-none text-sm bg-transparent text-zinc-400 cursor-pointer"
+                            className="active:opacity-70 hover:opacity-80 border-none text-base bg-transparent text-zinc-400 cursor-pointer"
                             aria-label="Clear search"
                             onClick={() => list.setQuery('')}
                         >
@@ -408,14 +458,41 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                     ))}
                 </div>
                 <div className="flex gap-2">
-                    <FavoriteChip active={list.favorites.star} color="var(--color-gold)" icon={<IconStar />} label="Starred only" onClick={() => list.setFavorites({ ...list.favorites, star: !list.favorites.star })} />
-                    <FavoriteChip active={list.favorites.heart} color="var(--color-rose)" icon={<IconHeart />} label="Hearted only" onClick={() => list.setFavorites({ ...list.favorites, heart: !list.favorites.heart })} />
+                    <FavoriteChip
+                        active={list.favorites.star}
+                        color="var(--color-gold)"
+                        icon={<IconStar />}
+                        label="Starred only"
+                        onClick={() => list.setFavorites({ ...list.favorites, star: !list.favorites.star })}
+                    />
+                    <FavoriteChip
+                        active={list.favorites.heart}
+                        color="var(--color-rose)"
+                        icon={<IconHeart />}
+                        label="Hearted only"
+                        onClick={() => list.setFavorites({ ...list.favorites, heart: !list.favorites.heart })}
+                    />
                 </div>
             </div>
             <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-4">
-                <MultiSelect label="YEAR" onChange={list.setYears} options={allYears(tracks).map(y => [y, String(y)] as [number, string])} placeholder="All" selected={list.years} />
-                <MultiSelect label="KEY" onChange={list.setKeys} options={allKeys(tracks).map(k => [k, k] as [string, string])} placeholder="All" selected={list.keys} />
-                <BPMSlider onChange={list.setBpmRange} value={list.bpmRange} />
+                <MultiSelect
+                    label="YEAR"
+                    onChange={list.setYears}
+                    options={allYears(tracks).map(y => [y, String(y)] as [number, string])}
+                    placeholder="All"
+                    selected={list.years}
+                />
+                <MultiSelect
+                    label="KEY"
+                    onChange={list.setKeys}
+                    options={allKeys(tracks).map(k => [k, k] as [string, string])}
+                    placeholder="All"
+                    selected={list.keys}
+                />
+                <BPMSlider
+                    onChange={list.setBpmRange}
+                    value={list.bpmRange}
+                />
             </div>
         </div>
     );
@@ -454,10 +531,13 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
     else summary = `${selected.length} selected`;
 
     return (
-        <div className="flex flex-col relative gap-2" ref={ref}>
+        <div
+            className="flex flex-col relative gap-2"
+            ref={ref}
+        >
             <span className="text-xs tracking-[0.2em] text-zinc-400">{label}</span>
             <button
-                className={`active:opacity-70 focus-visible:outline-none flex items-center justify-between px-4 py-2.5 border rounded-sm text-base text-left bg-zinc-900 duration-150 transition-[border-color] cursor-pointer select-none ${open ? 'border-orange-80' : 'border-transparent hover:border-orange-80'}`}
+                className={`active:opacity-70 flex items-center justify-between px-4 py-2.5 border rounded-sm text-base text-left bg-zinc-900 duration-150 transition-[border-color] cursor-pointer select-none ${open ? 'border-orange-80' : 'border-transparent hover:border-orange-80'}`}
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={`${label} filter`}
@@ -467,7 +547,13 @@ function MultiSelect<T extends string | number>({ label, options, placeholder, s
                 <span className="truncate">{summary}</span>
                 <IconChevron open={open} />
             </button>
-            {open && <MultiSelectPopover onChange={onChange} options={options} selected={selected} />}
+            {open && (
+                <MultiSelectPopover
+                    onChange={onChange}
+                    options={options}
+                    selected={selected}
+                />
+            )}
         </div>
     );
 }
@@ -510,7 +596,10 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                 type="text"
                 value={search}
             />
-            <ul className="overflow-y-auto max-h-[400px] m-0 p-1.5 list-none" role="listbox">
+            <ul
+                className="overflow-y-auto max-h-[400px] m-0 p-1.5 list-none"
+                role="listbox"
+            >
                 {filtered.length === 0 && (
                     <li className="p-4 text-center text-sm text-zinc-400">No matches.</li>
                 )}
@@ -525,8 +614,12 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                         >
                             <label
                                 className="flex items-center gap-2 px-3 py-2.5 rounded-sm text-sm cursor-pointer"
-                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)'; }}
-                                onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)'; }}
+                                onMouseEnter={(e) => {
+                                    if (!isSelected) e.currentTarget.style.background = 'var(--color-white-20)';
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!isSelected) e.currentTarget.style.background = 'var(--color-transparent)';
+                                }}
                                 style={{ background: isSelected ? 'var(--color-orange-20)' : 'var(--color-transparent)' }}
                             >
                                 <span
@@ -539,7 +632,7 @@ function MultiSelectPopover<T extends string | number>({ options, selected, onCh
                                     {isSelected ? '✓' : ''}
                                 </span>
                                 <input
-                                    className="hidden"
+                                    className="sr-only"
                                     checked={isSelected}
                                     onChange={() => toggleSelection(v)}
                                     type="checkbox"
@@ -570,8 +663,8 @@ function PageButton({ children, active, disabled, label, onClick }: {
 }
 
 function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: number) => void }) {
-    const showPages: (number | '…')[] = [];
     const total = list.pageCount;
+    const showPages: (number | '…')[] = [];
 
     for (let i = 0; i < total; i++) {
         if (i === 0 || i === total - 1 || Math.abs(i - list.page) <= PAGE_ADJACENT) showPages.push(i);
@@ -586,12 +679,40 @@ function Pagination({ list, setPage }: { list: TrackListState; setPage: (p: numb
                 {list.total}
             </span>
             <div className="flex gap-1">
-                <PageButton disabled={list.page === 0} label="Previous page" onClick={() => setPage(Math.max(0, list.page - 1))}><span className="leading-none text-base">‹</span></PageButton>
+                <PageButton
+                    disabled={list.page === 0}
+                    label="Previous page"
+                    onClick={() => setPage(Math.max(0, list.page - 1))}
+                >
+                    <span className="leading-none text-base">‹</span>
+                </PageButton>
                 {showPages.map((p, i) => {
-                    if (p === '…') return <span className="px-3 py-2 text-zinc-500" key={`e${i}`}>…</span>;
-                    return <PageButton active={p === list.page} key={p} label={`Page ${p + 1}`} onClick={() => setPage(p)}>{p + 1}</PageButton>;
+                    if (p === '…') return (
+                        <span
+                            className="px-3 py-2 text-zinc-500"
+                            key={`e${i}`}
+                        >
+                            …
+                        </span>
+                    );
+                    return (
+                        <PageButton
+                            active={p === list.page}
+                            key={p}
+                            label={`Page ${p + 1}`}
+                            onClick={() => setPage(p)}
+                        >
+                            {p + 1}
+                        </PageButton>
+                    );
                 })}
-                <PageButton disabled={list.page === list.pageCount - 1} label="Next page" onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}><span className="leading-none text-base">›</span></PageButton>
+                <PageButton
+                    disabled={list.page === list.pageCount - 1}
+                    label="Next page"
+                    onClick={() => setPage(Math.min(list.pageCount - 1, list.page + 1))}
+                >
+                    <span className="leading-none text-base">›</span>
+                </PageButton>
             </div>
         </div>
     );
@@ -655,11 +776,14 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
                 onSubmit={submit}
                 ref={formRef}
             >
-                <h2 id={titleId} className="mb-1 font-medium text-2xl tracking-[-0.01em]">
+                <h2
+                    id={titleId}
+                    className="mb-1 font-medium text-2xl tracking-[-0.01em]"
+                >
                     {target.track.data.title || '(untitled)'}
                 </h2>
                 <div className="mb-6 text-xs tracking-[0.2em] text-zinc-400">
-                    {`${categoryLabel(target.track.category).toUpperCase()} · ${target.track.id} · ${target.track.data.year}${target.track.data.bpm > 0 ? ` · BPM ${target.track.data.bpm}${target.track.data.tempo ? ` ${target.track.data.tempo}` : ''}` : ''} · ${target.track.data.keys.map(k => k.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', ')}`}
+                    {formatDetails(target.track)}
                 </div>
                 <div className="mb-6">
                     <DownloadChip kind={target.kind}>
@@ -676,18 +800,23 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
                     id={pinInputId}
                     className={`modal__input ${state === 'error' ? 'modal__input--error' : ''} w-full mb-2 px-4 py-4 rounded-none text-2xl tracking-[0.5em] duration-150 transition-[border-color,box-shadow]`}
                     autoComplete="off"
-                    maxLength={6}
+                    disabled={state === 'checking' || state === 'success'}
+                    maxLength={10}
                     onChange={e => setPin(e.target.value)}
                     placeholder=""
                     ref={inputRef}
                     type="password"
                     value={pin}
                 />
-                <div className="min-h-5 mb-6 text-xs" aria-live="polite" role="status" style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}>
+                <div
+                    className="min-h-5 mb-6 text-xs"
+                    aria-live="polite"
+                    role="status"
+                    style={{ color: state === 'error' ? 'var(--color-red)' : state === 'success' ? 'var(--color-sage)' : 'var(--color-white-60)' }}
+                >
                     {state === 'error' && 'Invalid pin.'}
                     {state === 'success' && 'Downloading…'}
-                    {state === 'idle' && ' '}
-                    {state === 'checking' && 'Verifying…'}
+                    {(state === 'idle' || state === 'checking') && ' '}
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -744,11 +873,14 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         setState('checking');
 
         try {
-            const res = await fetch('/api/verify-pin', {
-                body: JSON.stringify({ pin }),
-                headers: { 'Content-Type': 'application/json' },
-                method: 'POST',
-            });
+            const [res] = await Promise.all([
+                fetch('/api/verify-pin', {
+                    body: JSON.stringify({ pin }),
+                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST',
+                }),
+                new Promise(resolve => setTimeout(resolve, PIN_MIN_DELAY)),
+            ]);
             const { ok } = await res.json();
 
             if (!ok) {

@@ -31,11 +31,7 @@ function DownloadLink({ children, disabled, href }: {
 
     if (disabled || cooldown) {
         return (
-            <span
-                className="inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 opacity-40 cursor-not-allowed"
-            >
-                {children}
-            </span>
+            <span className="inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 opacity-40 cursor-not-allowed">{children}</span>
         );
     }
 
@@ -135,10 +131,32 @@ export function CatalogRow({ index, isActive, isPlaying, pinModal, track }: {
                 </div>
             </div>
             <span className="tabular-nums text-right text-sm text-zinc-400">{track.data.title ? formatDuration(track.data.duration) : ''}</span>
-            <div className="flex justify-start gap-2 pl-4" aria-label="Download options" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()} role="toolbar" tabIndex={-1}>
-                <DownloadLink disabled={!hasMaster} href={`/audio/${slug}.mp3`}>MP3</DownloadLink>
-                <DownloadButton disabled={!hasMaster} onClick={() => pinModal.open(track, 'master')}>WAV</DownloadButton>
-                <DownloadButton disabled={!hasMixdown} onClick={() => { if (hasMixdown) pinModal.open(track, 'mixdown'); }}>MIX</DownloadButton>
+            <div
+                className="flex justify-start gap-2 pl-4"
+                aria-label="Download options"
+                onClick={e => e.stopPropagation()}
+                onKeyDown={e => e.stopPropagation()}
+                role="group"
+                tabIndex={-1}
+            >
+                <DownloadLink
+                    disabled={!hasMaster}
+                    href={`/audio/${slug}.mp3`}
+                >
+                    MP3
+                </DownloadLink>
+                <DownloadButton
+                    disabled={!hasMaster}
+                    onClick={() => pinModal.open(track, 'master')}
+                >
+                    WAV
+                </DownloadButton>
+                <DownloadButton
+                    disabled={!hasMixdown}
+                    onClick={() => { if (hasMixdown) pinModal.open(track, 'mixdown'); }}
+                >
+                    MIX
+                </DownloadButton>
             </div>
         </div>
     );

@@ -13,60 +13,59 @@ user-invocable: true
 - No editorializing
 - Fix only with user approval
 
+## Imports
+
+Sort in three groups separated by blank lines, each sorted lexicographically:
+
+1. External
+2. Internal
+3. Types
+
+- Within each group: side-effect first, then default, then named
+
 ## Ordering
 
-Sort all identifiers lexicographically at all levels: declarations, object properties, interface properties, type properties, destructured bindings, and nested properties.
-
-Reorder top-level declarations in this sequence:
+Sort identifiers lexicographically at all levels and reorder top-level declarations in this sequence:
 
 1. Imports
 2. Types and interfaces
-3. Constants
+3. Constants (static values known at definition time)
 4. Variables
-5. Helpers
-6. Main logic
-7. Exports
-
-- Imports in three groups separated by blank lines: external, internal, types. Within each group, side-effect imports first, then default, then named. Each group sorted lexicographically.
-- Types before interfaces
-- Constants are static values known at definition time
-- Inline named exports at declaration
-- Single-use types and functions stay local. Multi-use types in `env.d.ts`, multi-use functions in `lib/`.
-
-## Tests
-
-- Order test cases by rendering order, not alphabetically
+5. Helpers (pure utilities)
+6. Functions (components and hooks)
+7. Main logic (execution and side effects)
+8. Exports (inline named at declaration)
 
 ## Style
 
-- Delete `console.log` and `debugger`
-- Delete comments
-- `async`/`await` over `.then()` chains
-- Descriptive names, flag ambiguous or abbreviated identifiers
-- `const` over `let` when never reassigned
+- `const` for all non-reassigned variables
 - `function` declarations over arrows unless inline callbacks
+- `async`/`await` over `.then()` chains
 - Functional components only, class components only for error boundaries
+- Descriptive names, flag ambiguous or abbreviated identifiers
 - Braces and multiple lines for `for` and `while` loops
 - Ternaries only if they fit on one line
 - 4-space indentation
-- Indent `<script>` content in `.astro` files
-- Blank lines around block elements: functions, if/else, for/while, try/catch, classes
-- Blank lines between logical groups, not between consecutive declarations
-- Single-line guards may stay grouped, multi-line if blocks need surrounding blank lines
+- Blank lines around block elements and between logical groups
+- Single-line guards may stay grouped, multi-line blocks need surrounding blank lines
+- Extract magic numbers to named constants
+- Numeric separators for 4+ digits
+- Delete `console.log`
+- Delete comments
 
 ## Safety
 
+- Strict equality only
+- Never mutate React state or props directly
+- Cleanup listeners, timers, and subscriptions in `useEffect`
+
+## Types
+
+- Avoid explicit `any` and `!` non-null assertions
 - Type narrowing must carry into closures
-- Empty `catch` blocks must log or re-throw
-- Never mutate parameters
-- Strict equality only: `===` and `!==`
-- Extract magic numbers to named constants
-- Numeric separators for 4+ digits
+- Types before interfaces
+- Colocate single-use types, shared types in `env.d.ts`
 
 ## Astro
 
 - One `<script>` block per `.astro` file
-
-## Scope
-
-- Reorder, rename, and reformat only

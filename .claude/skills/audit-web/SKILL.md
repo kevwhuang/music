@@ -6,6 +6,7 @@ user-invocable: true
 
 - Audit all project files
 - Skip paths in `.gitignore`
+- Use Playwright for runtime checks
 
 ## Protocol
 
@@ -15,103 +16,59 @@ user-invocable: true
 
 ## Security
 
-- HTTPS enforced
-- Secrets excluded from version control and client bundles
-- Input validation and sanitization on all user data
-- XSS prevention with output encoding and CSP headers
-- CSRF protection on state-changing requests
-- Security headers: X-Frame-Options, Referrer-Policy, HSTS
-- Cookies use `HttpOnly`, `Secure`, and `SameSite`
-- CORS configured for allowed origins
-- Dependency vulnerabilities scanned
+- Secrets excluded from source and client bundles
+- Security headers configured
+- Output encoded to prevent XSS
+- CORS restricted to allowed origins
+- User input validated and sanitized
 - Rate limiting on API endpoints
-- Subresource integrity for external scripts
 
 ## Accessibility
 
-- `lang` attribute on `<html>`
-- Unique and descriptive page titles
-- Skip navigation link
 - Semantic HTML with logical heading hierarchy
-- Focus order matches visual order
-- Keyboard navigation with visible focus indicators
-- Color contrast meets WCAG AA: 4.5:1 for text, 3:1 for UI
 - Alt text on all images or marked decorative
-- Form inputs have associated labels
-- Form errors associated via `aria-describedby`
-- ARIA labels and roles on elements without visible text
-- No information conveyed by color alone
+- ARIA labels on elements without visible text
+- Keyboard navigable with visible focus indicators
+- Form inputs labeled, errors linked via `aria-describedby`
 - Decorative elements hidden from assistive technology
-- Reduced motion respected via `prefers-reduced-motion`
-- Page functional at 200% zoom
-
-## Performance
-
-- Core Web Vitals: LCP < 2.5s, INP < 200ms, CLS < 0.1
-- Lighthouse score 90+ on mobile
-- No render-blocking resources in critical path
-- Code split by route
-- JavaScript bundle minimized with tree shaking
-- Images optimized: modern formats, `srcset`, lazy loading, dimensions set
-- Critical CSS inlined, non-critical deferred
-- Fonts preloaded with `font-display: swap`
-- Assets compressed and cached via CDN
-- Third-party scripts async or deferred
-- Preconnect and DNS prefetch for third-party origins
-
-## Responsiveness
-
-- No horizontal scroll at any viewport
-- Mobile layout functional from 320px
-- Navigation adapts per breakpoint
-- Touch targets minimum 44x44px
-- Typography scales with readable line lengths
-- Large screens capped with max-width container
-- Tables scroll or stack on mobile
-
-## Visuals
-
-- Typography hierarchy consistent
-- Hover, focus, active, and disabled states on all interactive elements
-- Shared transition durations and easing
-- Spacing from design tokens
-- UI consistent across pages
-- Icons match in style and sizing
-- `prefers-color-scheme` respected if dark mode supported
-- Loading and skeleton states for async content
-- Empty and error states designed
-
-## Interactivity
-
-- Interactive elements respond immediately
-- Focus trapped in modals and restored on close
-- Disabled states prevent interaction and appear muted
-- Form inputs validate inline with error messages
-- Smooth scroll with anchor offsets
-- Double-submit prevented on forms
-- Browser history navigation functional
-
-## Errors
-
-- Error boundaries catch component failures
-- Errors logged to monitoring service
-- 404 and error pages styled and helpful
-- API errors show user-friendly messages
-- Graceful degradation when features unavailable
-- Network failures trigger retry logic
-- Fallback UI for failed component loads
-- Offline fallback page
+- Descriptive page titles
+- Functional at 200% zoom
 
 ## Content
 
+- Spelling, grammar, and punctuation correct
+- No placeholder text or dummy data
 - All links functional
 - Unique and descriptive headings
-- No placeholder text or dummy data
-- Spelling, grammar, and punctuation correct
-- Dates and numbers formatted for locale
+
+## Visuals
+
+- UI consistent across pages
+- Spacing from design tokens
+- Typography hierarchy maintained
+- Icons match in style and sizing
+- Shared transition durations and easing
+- Loading and skeleton states for async content
+
+## Interactivity
+
+- Hover, focus, active, and disabled states on all interactive elements
+- Form inputs validate inline with error messages
+- Focus trapped in modals and restored on close
+- Rapid repeated clicks handled gracefully
+- Smooth scroll with anchor offsets
+
+## Responsiveness
+
+- Layout and navigation adapt across mobile, tablet, and desktop
+- No horizontal scroll at any viewport
+- Max-width container on large screens
+- Typography scales with readable line lengths
+- Images use `srcset` for responsive sizing
+- Touch targets minimum 48x48px
 
 ## Compatibility
 
-- Cross-browser: Chrome, Firefox, Safari, Edge
+- Browsers: Chrome, Firefox, Safari, Edge
 - Mobile: iOS and Android
-- Input methods: mouse, touch, keyboard
+- Inputs: mouse, touch, keyboard

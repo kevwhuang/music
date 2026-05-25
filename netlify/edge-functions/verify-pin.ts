@@ -14,22 +14,34 @@ export default async function (request: Request, context: Context) {
     if (request.method !== 'POST') return json({ ok: false }, 405);
 
     const ip = context.ip || 'unknown';
+    const isDev = Deno.env.get('NETLIFY_DEV') === 'true';
     const now = Date.now();
-    const store = getDeployStore({ consistency: 'strong', name: 'pin-rate-limit' });
-    const raw = await store.get(ip, { type: 'json' }) as number[] | null;
-    const timestamps = (raw || []).filter(ts => now - ts < WINDOW_MS);
 
-    if (timestamps.length >= MAX_ATTEMPTS) return json({ error: 'rate_limit', ok: false }, 429);
+    let timestamps: number[] = [];
+
+    if (!isDev) {
+        const store = getDeployStore({ consistency: 'strong', name: 'pin-rate-limit' });
+        const raw = await store.get(ip, { type: 'json' }) as number[] | null;
+
+        timestamps = (raw || []).filter(timestamp => now - timestamp < WINDOW_MS);
+
+        if (timestamps.length >= MAX_ATTEMPTS) return json({ error: 'rate_limit', ok: false }, 429);
+    }
 
     const secret = Deno.env.get('DOWNLOAD_PIN') ?? '';
 
     if (!secret) return json({ error: 'not_configured', ok: false }, 503);
+
+    const length = parseInt(request.headers.get('content-length') || '0', 10);
+
+    if (length > 64) return json({ ok: false }, 413);
 
     const body = await request.json().catch(() => null);
 
     if (!body) return json({ ok: false }, 400);
 
     const pin = String(body.pin ?? '');
+
     let match = false;
 
     if (pin.length === secret.length) {
@@ -42,8 +54,12 @@ export default async function (request: Request, context: Context) {
         match = result === 0;
     }
 
-    timestamps.push(now);
-    await store.setJSON(ip, timestamps);
+    if (!isDev) {
+        const store = getDeployStore({ consistency: 'strong', name: 'pin-rate-limit' });
+
+        timestamps.push(now);
+        await store.setJSON(ip, timestamps);
+    }
 
     return json({ ok: match }, match ? 200 : 401);
 }

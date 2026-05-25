@@ -92,32 +92,44 @@ function createPlayerStore() {
             if (!audio) {
                 audio = new Audio();
                 audio.crossOrigin = 'anonymous';
+
                 const element = audio;
 
                 audioCtx = new AudioContext();
                 const source = audioCtx.createMediaElementSource(element);
 
                 lpFilter = audioCtx.createBiquadFilter();
+
                 lpFilter.type = 'lowpass';
                 lpFilter.Q.value = FILTER_Q;
                 lpFilter.frequency.value = mapLowpass(store.state.lowpass);
+
                 hpFilter = audioCtx.createBiquadFilter();
+
                 hpFilter.type = 'highpass';
                 hpFilter.Q.value = FILTER_Q;
                 hpFilter.frequency.value = mapHighpass(store.state.highpass);
+
                 gainNode = audioCtx.createGain();
+
                 gainNode.gain.value = store.state.volume;
+
                 const limiter = audioCtx.createDynamicsCompressor();
+
                 limiter.threshold.value = 0;
                 limiter.knee.value = 0;
                 limiter.ratio.value = 20;
                 limiter.attack.value = 0.001;
                 limiter.release.value = 0.01;
+
                 const splitter = audioCtx.createChannelSplitter(2);
+
                 analyserL = audioCtx.createAnalyser();
                 analyserR = audioCtx.createAnalyser();
+
                 analyserL.fftSize = 1_024;
                 analyserR.fftSize = 1_024;
+
                 timeBufL = new Float32Array(analyserL.fftSize);
                 timeBufR = new Float32Array(analyserR.fftSize);
 
@@ -180,6 +192,7 @@ function createPlayerStore() {
             if (!analyserL || !analyserR || !timeBufL || !timeBufR) return [0, 0];
             analyserL.getFloatTimeDomainData(timeBufL);
             analyserR.getFloatTimeDomainData(timeBufR);
+
             let sumL = 0;
             let sumR = 0;
 

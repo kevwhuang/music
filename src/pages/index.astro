@@ -23,7 +23,13 @@ const catalogTracks = tracks.map(track => ({
     description="Browse music, sessions, and productions from Aephonics."
     title="Music"
 >
-    <Player client:only="react" tracks={tracks} />
+    <Player
+        client:only="react"
+        tracks={tracks}
+    />
     <Hero tracks={tracks} />
-    <Catalog client:load tracks={catalogTracks} />
+    <Catalog
+        client:load
+        tracks={catalogTracks}
+    />
 </Layout>

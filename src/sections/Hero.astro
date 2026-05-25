@@ -1,18 +1,17 @@
 ---
-const { tracks } = Astro.props as { tracks: Track[] };
+interface Props {
+    tracks: Track[];
+}
+
+const { tracks } = Astro.props;
 
 const TICKER = ['ideate', 'sample', 'synthesize', 'record', 'compose', 'arrange', 'produce', 'mix', 'master', 'publish'];
 
-const musicCount = tracks.filter(track => track.category === 'music').length;
-const productionsCount = tracks.filter(track => track.category === 'productions').length;
-const sessionsCount = tracks.filter(track => track.category === 'sessions').length;
-const starredCount = tracks.filter(track => track.flags.star).length;
-
 const stats = [
-    { count: musicCount, label: 'MUSIC' },
-    { count: sessionsCount, label: 'SESSIONS' },
-    { count: productionsCount, label: 'PRODUCTIONS' },
-    { accent: true, count: starredCount, label: 'STARRED' },
+    { count: tracks.filter(track => track.category === 'music').length, label: 'MUSIC' },
+    { count: tracks.filter(track => track.category === 'sessions').length, label: 'SESSIONS' },
+    { count: tracks.filter(track => track.category === 'productions').length, label: 'PRODUCTIONS' },
+    { accent: true, count: tracks.filter(track => track.flags.star).length, label: 'STARRED' },
 ];
 ---
 
@@ -21,33 +20,52 @@ const stats = [
     aria-label="Introduction"
 >
     <div class="max-w-7xl mx-auto">
-        <h1 class="hero__title mb-12 font-inter font-semibold leading-none text-9xl tracking-[-0.05em] text-zinc-100" aria-label="aephonics from concept to master.">
-            <span class="hero__line opacity-0" aria-hidden="true">aephonics</span>
+        <h1
+            class="hero__title mb-12 font-inter font-semibold leading-none text-9xl tracking-[-0.05em] text-zinc-100"
+            aria-label="Aephonics from concept to master"
+        >
+            <span
+                class="hero__line opacity-0"
+                aria-hidden="true"
+            >
+                aephonics
+            </span>
             <br />
-            <span class="hero__line text-zinc-400 opacity-0" aria-hidden="true">from concept</span>
+            <span
+                class="hero__line text-zinc-400 opacity-0"
+                aria-hidden="true"
+            >
+                from concept
+            </span>
             <br />
-            <span class="hero__line text-orange-80 opacity-0" aria-hidden="true">to master.</span>
+            <span
+                class="hero__line text-orange-80 opacity-0"
+                aria-hidden="true"
+            >
+                to master.
+            </span>
         </h1>
-        <p class="hero__subtitle mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] uppercase text-zinc-300 opacity-0">
-            Producer and engineer. A decade of craft. <span class="text-orange-80">5M+ streams.</span><br />
-            Minimal setup. Maximum signal. Untethered from genre.<br />
+        <p class="hero__tagline mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] uppercase text-zinc-300 opacity-0">
+            Producer and engineer. A decade of craft. <span class="text-orange-80">5M+ streams.</span>
+            <br />
+            Minimal setup. Maximum signal. Untethered from genre.
+            <br />
             Based in <span class="text-orange-80">Austin.</span> Open to collab.
         </p>
         <div class="hero__stats relative opacity-0">
-            <div class="hero__ticker -top-9 absolute grid justify-items-end overflow-hidden right-6 h-7 w-fit" aria-hidden="true">
+            <div
+                class="hero__ticker -top-9 absolute grid justify-items-end overflow-hidden right-6 h-7 w-fit"
+                aria-hidden="true"
+            >
                 {TICKER.map(word => (
-                    <span class="hero__ticker-word col-start-1 row-start-1 font-mono text-base tracking-[0.2em] text-zinc-500 opacity-0">
-                        {word}
-                    </span>
+                    <span class="hero__ticker-word col-start-1 row-start-1 font-mono text-base tracking-[0.2em] text-zinc-500 opacity-0">{word}</span>
                 ))}
             </div>
             <dl class="grid grid-cols-4 gap-8 p-6 border border-zinc-800 bg-zinc-800">
                 {stats.map(({ accent, count, label }, i) => (
                     <div class={`pl-5 ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
                         <dt class="mb-2 font-mono text-xs tracking-[0.2em] text-zinc-400">{label}</dt>
-                        <dd class:list={['hero__stat-count font-inter font-medium leading-none text-4xl tracking-[-0.025em]', accent ? 'text-orange-80' : 'text-zinc-100']}>
-                            {count}
-                        </dd>
+                        <dd class:list={['hero__stat-count font-inter font-medium leading-none text-4xl tracking-[-0.025em]', accent ? 'text-orange-80' : 'text-zinc-100']}>{count}</dd>
                     </div>
                 ))}
             </dl>
@@ -85,11 +103,11 @@ const stats = [
     function initHero(): void {
         const lines = document.querySelectorAll<HTMLElement>('.hero__line');
         const stats = document.querySelector<HTMLElement>('.hero__stats');
-        const subtitle = document.querySelector<HTMLElement>('.hero__subtitle');
+        const tagline = document.querySelector<HTMLElement>('.hero__tagline');
         const ticker = document.querySelector<HTMLElement>('.hero__ticker');
         const words = document.querySelectorAll<HTMLElement>('.hero__ticker-word');
 
-        if (!lines.length || !stats || !subtitle || !ticker || !words.length) return;
+        if (!lines.length || !stats || !tagline || !ticker || !words.length) return;
 
         const distance = ticker.offsetWidth;
 
@@ -101,7 +119,7 @@ const stats = [
         if (skipEntrance) {
             lines.forEach(line => gsap.set(line, { opacity: 1 }));
             gsap.set(stats, { opacity: 1 });
-            gsap.set(subtitle, { opacity: 1 });
+            gsap.set(tagline, { opacity: 1 });
             cycle(distance, words);
             return;
         }
@@ -112,7 +130,7 @@ const stats = [
         gsap.set(lines[1], { y: LINE_Y });
         gsap.set(lines[2], { y: LINE_Y });
         gsap.set(stats, { y: SECTION_Y });
-        gsap.set(subtitle, { y: SECTION_Y });
+        gsap.set(tagline, { y: SECTION_Y });
 
         timeline.to(chars, {
             duration: CHAR_DURATION,
@@ -133,7 +151,7 @@ const stats = [
             opacity: 1,
             y: 0,
         });
-        timeline.to(subtitle, {
+        timeline.to(tagline, {
             duration: SECTION_DURATION,
             ease: 'power3.out',
             opacity: 1,
@@ -149,8 +167,8 @@ const stats = [
     }
 
     function splitChars(element: HTMLElement): HTMLElement[] {
-        const text = element.textContent || '';
         const chars: HTMLElement[] = [];
+        const text = element.textContent || '';
 
         element.textContent = '';
         gsap.set(element, { opacity: 1 });
@@ -162,6 +180,7 @@ const stats = [
             }
 
             const span = document.createElement('span');
+
             span.textContent = char;
             element.appendChild(span);
             chars.push(span);
@@ -172,6 +191,5 @@ const stats = [
         return chars;
     }
 
-    initHero();
     document.addEventListener('astro:page-load', initHero);
 </script>

@@ -1,5 +1,5 @@
 ---
-const links = [
+const LINKS = [
     { href: 'https://instagram.com/aephonics', label: 'INSTAGRAM', value: '@aephonics' },
     { href: 'mailto:kevin@aephonics.com', label: 'EMAIL', value: 'kevin@aephonics.com' },
     { href: 'https://austinproduceralliance.com', label: 'COLLECTIVE', value: 'austinproduceralliance.com' },
@@ -9,22 +9,27 @@ const links = [
 <footer class="py-16 border-t border-zinc-800 bg-zinc-950">
     <div class="flex items-start justify-between max-w-7xl gap-6 mx-auto">
         <div>
-            <a class="footer__brand mb-2 font-inter font-medium no-underline text-base tracking-[-0.01em] text-zinc-100 duration-150 transition-[color,text-shadow,opacity]" href="https://aephonics.com">aephonics</a>
+            <a
+                class="footer__brand mb-2 font-inter font-medium no-underline text-base tracking-[-0.01em] text-zinc-100 duration-150 transition-[color,opacity,text-shadow]"
+                href="https://aephonics.com"
+            >
+                aephonics
+            </a>
             <p class="text-sm text-zinc-400">&copy; 2026. All rights reserved.</p>
         </div>
         <dl class="flex gap-8 text-sm tracking-[0.04em]">
-            {links.map(({ href, label, value }) => (
+            {LINKS.map(({ href, label, value }) => (
                 <div class="flex flex-col gap-2 font-mono">
                     <dt class="text-xs tracking-[0.2em] text-zinc-500">{label}</dt>
                     <dd>
                         <a
-                            class="footer__link no-underline text-sm text-zinc-100 duration-150 transition-[color,text-shadow,opacity]"
+                            class="footer__link no-underline text-sm text-zinc-100 duration-150 transition-[color,opacity,text-shadow]"
                             href={href}
                             rel="noopener noreferrer"
                             target="_blank"
                         >
                             {value}
-                            <span class="sr-only"> (opens in new tab)</span>
+                            <span class="sr-only">opens in new tab</span>
                         </a>
                     </dd>
                 </div>

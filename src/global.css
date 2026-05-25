@@ -50,10 +50,6 @@ body {
     outline-offset: 2px;
 }
 
-[data-scroll] {
-    opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

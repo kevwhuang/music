@@ -10,10 +10,27 @@ export function categoryLabel(category: Track['category']): string {
     return { music: 'Music', productions: 'Productions', sessions: 'Sessions' }[category] ?? category;
 }
 
-export function formatDuration(seconds: number | undefined | null): string {
-    if (seconds === null || seconds === undefined) return '—';
+export function formatDetails(track: Track): string {
+    const parts = [
+        categoryLabel(track.category).toUpperCase(),
+        track.id,
+        String(track.data.year),
+    ];
+
+    if (track.data.bpm > 0) {
+        parts.push(`BPM ${track.data.bpm}${track.data.tempo ? ` ${track.data.tempo}` : ''}`);
+    }
+
+    parts.push(track.data.keys.map(key => key.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', '));
+
+    return parts.join(' · ');
+}
+
+export function formatDuration(seconds: number | null): string {
+    if (seconds === null) return '—';
 
     const minutes = Math.floor(seconds / 60);
     const remaining = String(Math.floor(seconds % 60)).padStart(2, '0');
+
     return `${minutes}:${remaining}`;
 }

@@ -1,7 +1,14 @@
 export function IconStar() {
     return (
-        <svg className="block" aria-hidden="true" fill="currentColor" height="16" viewBox="0 0 24 24" width="16">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+        <svg
+            className="block"
+            aria-hidden="true"
+            fill="currentColor"
+            height="16"
+            viewBox="0 0 16 16"
+            width="16"
+        >
+            <path d="M8 1.33l2.06 4.17 4.61.67-3.34 3.25.79 4.59L8 11.85l-4.12 2.16.79-4.59-3.34-3.25 4.61-.67L8 1.33z" />
         </svg>
     );
 }

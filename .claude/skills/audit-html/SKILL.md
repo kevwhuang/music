@@ -22,6 +22,7 @@ user-invocable: true
 ## Markup
 
 - Semantic elements over `div`/`span`
+- One attribute per line when element has multiple attributes and children
 - Self-closing void elements
 - 4-space indentation
 - Blank lines only between root-level elements

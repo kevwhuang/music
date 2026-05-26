@@ -7,9 +7,11 @@ import Layout from '@/Layout.astro';
 import Player from '@sections/Player';
 
 const entries = await getCollection('tracks');
+
 const tracks = entries
     .map(entry => ({ ...entry.data, id: entry.id }))
     .sort((a, b) => a.id.localeCompare(b.id));
+
 const catalogTracks = tracks.map(track => ({
     category: track.category,
     data: track.data,

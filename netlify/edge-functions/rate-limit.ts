@@ -1,25 +1,31 @@
-import { getDeployStore } from '@netlify/blobs';
+import { getStore } from '@netlify/blobs';
 
 import type { Config, Context } from '@netlify/edge-functions';
 
-const MAX_REQUESTS = 30;
+const MAX_REQUESTS = 100;
 const WINDOW_MS = 60_000;
 
 export default async function (_request: Request, context: Context) {
-    const ip = context.ip || 'unknown';
-
-    if (ip === '::1' || ip === '127.0.0.1') return context.next();
-
-    const isDev = Deno.env.get('NETLIFY_DEV') === 'true';
+    const isDev = Netlify.env.get('NETLIFY_DEV') === 'true';
 
     if (isDev) return context.next();
 
+    const ip = context.ip || 'unknown';
     const now = Date.now();
-    const store = getDeployStore({ consistency: 'strong', name: 'rate-limit' });
-    const raw = await store.get(ip, { type: 'json' }) as number[] | null;
-    const timestamps = (raw || []).filter(timestamp => now - timestamp < WINDOW_MS);
+    const store = getStore({ consistency: 'strong', name: 'rate-limit' });
 
-    if (timestamps.length >= MAX_REQUESTS) return new Response('Rate limit exceeded', { status: 429 });
+    const raw = await store.get(ip, { type: 'json' }) as number[] | null;
+
+    const timestamps = (raw ?? []).filter(timestamp => now - timestamp < WINDOW_MS);
+
+    if (timestamps.length >= MAX_REQUESTS) {
+        const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1_000);
+
+        return new Response('Rate limit exceeded', {
+            headers: { 'Retry-After': String(retryAfter) },
+            status: 429,
+        });
+    }
 
     timestamps.push(now);
     await store.setJSON(ip, timestamps);

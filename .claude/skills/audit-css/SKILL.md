@@ -81,7 +81,6 @@ Sort declaration blocks lexicographically within each tier, pseudos follow their
 ## Tailwind
 
 - Prefer Tailwind over custom CSS
-- No arbitrary values
 - Inline styles only for runtime-computed values
 
 Sort classes lexicographically within each tier:

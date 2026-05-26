@@ -7,12 +7,12 @@ export function buildSlug(id: string, title: string): string {
 }
 
 export function categoryLabel(category: Track['category']): string {
-    return { music: 'Music', productions: 'Productions', sessions: 'Sessions' }[category] ?? category;
+    return { music: 'MUSIC', productions: 'PRODUCTIONS', sessions: 'SESSIONS' }[category] ?? category;
 }
 
 export function formatDetails(track: Track): string {
     const parts = [
-        categoryLabel(track.category).toUpperCase(),
+        categoryLabel(track.category),
         track.id,
         String(track.data.year),
     ];
@@ -23,11 +23,11 @@ export function formatDetails(track: Track): string {
 
     parts.push(track.data.keys.map(key => key.toUpperCase().replace(/([A-G])B/g, '$1b')).join(', '));
 
-    return parts.join(' · ');
+    return parts.join(' \u00B7 ');
 }
 
 export function formatDuration(seconds: number | null): string {
-    if (seconds === null) return '—';
+    if (seconds === null) return '\u2014';
 
     const minutes = Math.floor(seconds / 60);
     const remaining = String(Math.floor(seconds % 60)).padStart(2, '0');

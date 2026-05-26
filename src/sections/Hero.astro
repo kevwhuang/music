@@ -16,12 +16,12 @@ const stats = [
 ---
 
 <section
-    class="hero py-32 border-b border-zinc-800"
+    class="py-32 border-b border-zinc-800"
     aria-label="Introduction"
 >
     <div class="max-w-7xl mx-auto">
         <h1
-            class="hero__title mb-12 font-inter font-semibold leading-none text-9xl tracking-[-0.05em] text-zinc-100"
+            class="mb-12 font-inter font-semibold leading-none text-9xl tracking-[-0.05em] text-zinc-100"
             aria-label="Aephonics from concept to master"
         >
             <span
@@ -45,12 +45,12 @@ const stats = [
                 to master.
             </span>
         </h1>
-        <p class="hero__tagline mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] uppercase text-zinc-300 opacity-0">
-            Producer and engineer. A decade of craft. <span class="text-orange-80">5M+ streams.</span>
+        <p class="hero__tagline mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] text-zinc-300 opacity-0">
+            PRODUCER AND ENGINEER. A DECADE OF CRAFT. <span class="text-orange-80">5M+ STREAMS.</span>
             <br />
-            Minimal setup. Maximum signal. Untethered from genre.
+            MINIMAL SETUP. MAXIMUM SIGNAL. UNTETHERED FROM GENRE.
             <br />
-            Based in <span class="text-orange-80">Austin.</span> Open to collab.
+            BASED IN <span class="text-orange-80">AUSTIN.</span> OPEN TO COLLAB.
         </p>
         <div class="hero__stats relative opacity-0">
             <div
@@ -65,7 +65,7 @@ const stats = [
                 {stats.map(({ accent, count, label }, i) => (
                     <div class={`pl-5 ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
                         <dt class="mb-2 font-mono text-xs tracking-[0.2em] text-zinc-400">{label}</dt>
-                        <dd class:list={['hero__stat-count font-inter font-medium leading-none text-4xl tracking-[-0.025em]', accent ? 'text-orange-80' : 'text-zinc-100']}>{count}</dd>
+                        <dd class:list={['font-inter font-medium leading-none text-4xl tracking-[-0.025em]', accent ? 'text-orange-80' : 'text-zinc-100']}>{count}</dd>
                     </div>
                 ))}
             </dl>
@@ -139,30 +139,35 @@ const stats = [
             stagger: CHAR_STAGGER,
             y: 0,
         });
+
         timeline.to(lines[1], {
             duration: LINE_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
+
         timeline.to(lines[2], {
             duration: LINE_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
+
         timeline.to(tagline, {
             duration: SECTION_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
+
         timeline.to(stats, {
             duration: SECTION_DURATION,
             ease: 'power3.out',
             opacity: 1,
             y: 0,
         });
+
         timeline.call(() => cycle(distance, words), undefined, '<');
     }
 

@@ -1,10 +1,9 @@
 export function IconChevron({ open }: { open: boolean }) {
     return (
         <svg
-            className="text-white-40 duration-150 transition-transform"
+            className={`text-white-40 duration-150 transition-transform ${open ? 'rotate-180' : ''}`}
             aria-hidden="true"
             height="6"
-            style={{ transform: open ? 'rotate(180deg)' : 'none' }}
             viewBox="0 0 10 6"
             width="10"
         >

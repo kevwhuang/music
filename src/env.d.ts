@@ -9,6 +9,7 @@ interface PinModalActions {
 
 interface Track {
     category: 'music' | 'productions' | 'sessions';
+
     data: {
         bpm: number;
         duration: number;
@@ -17,12 +18,14 @@ interface Track {
         title: string;
         year: number;
     };
+
     flags: {
         heart: boolean;
         master: boolean;
         mixdown: boolean;
         star: boolean;
     };
+
     id: string;
     peaks: number[];
 }

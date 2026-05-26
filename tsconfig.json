@@ -1,10 +1,8 @@
 {
     "extends": "astro/tsconfigs/strict",
     "exclude": [
-        ".netlify",
         "dist",
         "netlify",
-        "node_modules",
         "tests"
     ],
     "compilerOptions": {

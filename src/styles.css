@@ -1,3 +1,11 @@
+.catalog__body > .catalog__row + .catalog__row {
+    box-shadow: inset 0 1px 0 var(--color-white-20);
+}
+
+.catalog__body > .catalog__row--playing:not(.catalog__row--disabled):hover {
+    background: var(--color-orange-40);
+}
+
 .catalog__body > .catalog__row:not(.catalog__row--disabled):hover {
     background: var(--color-white-20);
 }
@@ -6,28 +14,18 @@
     background: var(--color-white-40);
 }
 
-.catalog__body > .catalog__row--playing:not(.catalog__row--disabled):hover {
-    background: var(--color-orange-40);
-}
-
 .catalog__category--active {
     background: var(--color-orange-80);
     color: var(--color-white);
     font-weight: 600;
 }
 
-.catalog__category:not(.catalog__category--active):hover {
-    background: var(--color-white-20);
-    color: var(--color-orange-80);
-}
-
 .catalog__category:active {
     opacity: 0.7;
 }
 
-.catalog__download:hover:not(:disabled) {
+.catalog__category:not(.catalog__category--active):hover {
     background: var(--color-white-20);
-    border-color: var(--color-orange-80);
     color: var(--color-orange-80);
 }
 
@@ -40,14 +38,20 @@
     opacity: 0.4;
 }
 
+.catalog__download:hover:not(:disabled) {
+    background: var(--color-white-20);
+    border-color: var(--color-orange-80);
+    color: var(--color-orange-80);
+}
+
 .catalog__dropdown {
     box-shadow: 0 10px 30px var(--color-black-60);
     scrollbar-color: var(--color-white-20) var(--color-transparent);
     scrollbar-width: thin;
 }
 
-.catalog__dropdown-input:focus-visible {
-    outline: none;
+.catalog__favorite:active {
+    opacity: 0.7;
 }
 
 .catalog__favorite:not([aria-pressed="true"]):hover {
@@ -56,24 +60,18 @@
     color: var(--color-orange-80);
 }
 
-.catalog__favorite:active {
-    opacity: 0.7;
-}
-
 .catalog__grid {
     grid-template-columns: 36px auto minmax(0, 1fr) auto auto;
+}
+
+.catalog__option:not(.bg-orange-20):hover {
+    background: var(--color-white-20);
 }
 
 .catalog__page--active {
     background: var(--color-orange-80);
     border-color: var(--color-orange-80);
     color: var(--color-white);
-}
-
-.catalog__page:hover:not(:disabled):not(.catalog__page--active) {
-    background: var(--color-white-20);
-    border-color: var(--color-orange-80);
-    color: var(--color-orange-80);
 }
 
 .catalog__page:active:not(:disabled):not(.catalog__page--active) {
@@ -83,6 +81,12 @@
 .catalog__page:disabled {
     cursor: not-allowed;
     opacity: 0.4;
+}
+
+.catalog__page:hover:not(:disabled):not(.catalog__page--active) {
+    background: var(--color-white-20);
+    border-color: var(--color-orange-80);
+    color: var(--color-orange-80);
 }
 
 .catalog__row {
@@ -99,19 +103,19 @@
     background: var(--color-orange-20);
 }
 
-.catalog__search:focus-visible {
-    outline: none;
-}
-
 .catalog__sort--active {
     color: var(--color-orange-80);
+}
+
+.catalog__sort:active {
+    opacity: 0.7;
 }
 
 .catalog__sort:hover:not(.catalog__sort--active) {
     color: var(--color-white);
 }
 
-.catalog__sort:active {
+.footer__brand:active {
     opacity: 0.7;
 }
 
@@ -120,17 +124,13 @@
     text-shadow: 0 0 20px var(--color-orange);
 }
 
-.footer__brand:active {
+.footer__link:active {
     opacity: 0.7;
 }
 
 .footer__link:hover {
     color: var(--color-orange-80);
     text-shadow: 0 0 20px var(--color-orange);
-}
-
-.footer__link:active {
-    opacity: 0.7;
 }
 
 .modal {
@@ -155,13 +155,13 @@
     box-shadow: 0 0 0 3px var(--color-red-20);
 }
 
-.modal__input:hover {
-    border-color: var(--color-white-40);
-}
-
 .modal__input:focus {
     border-color: var(--color-orange-80);
     outline: none;
+}
+
+.modal__input:hover {
+    border-color: var(--color-white-40);
 }
 
 .modal__overlay {
@@ -184,12 +184,12 @@
     opacity: 0;
 }
 
-.player__collapse:hover {
-    opacity: 0.8;
-}
-
 .player__collapse:active {
     opacity: 0.6;
+}
+
+.player__collapse:hover {
+    opacity: 0.8;
 }
 
 .player__counter {
@@ -279,11 +279,6 @@
     color: var(--color-cream);
 }
 
-.player__transport:hover:not(:disabled):not(.player__transport--active) {
-    border-color: var(--color-orange-80);
-    color: var(--color-cream);
-}
-
 .player__transport:active:not(:disabled) {
     opacity: 0.7;
 }
@@ -291,6 +286,11 @@
 .player__transport:disabled {
     color: var(--color-cream-40);
     cursor: not-allowed;
+}
+
+.player__transport:hover:not(:disabled):not(.player__transport--active) {
+    border-color: var(--color-orange-80);
+    color: var(--color-cream);
 }
 
 .player__waveform {

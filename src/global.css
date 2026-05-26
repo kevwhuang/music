@@ -44,7 +44,7 @@ body {
     outline: none;
 }
 
-:focus-visible {
+:focus-visible:not(input) {
     border-radius: 2px;
     outline: 2px solid var(--color-orange-80);
     outline-offset: 2px;

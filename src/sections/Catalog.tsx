@@ -35,6 +35,7 @@ const BPM_MIN = 50;
 const ENTRANCE_DURATION = 0.5;
 const ENTRANCE_Y = 30;
 const FOCUS_DELAY = 50;
+const MAX_INLINE_SELECTED = 5;
 const PAGE_ADJACENT = 2;
 const PAGE_SIZE = 50;
 const PIN_MIN_DELAY = 500;
@@ -514,7 +515,7 @@ function MultiSelect<T extends number | string>({ label, onChange, options, plac
     let summary: string;
 
     if (selected.length === 0) summary = placeholder;
-    else if (selected.length <= 5) summary = options.filter(([key]) => selected.includes(key)).map(([, label]) => label).join(', ');
+    else if (selected.length <= MAX_INLINE_SELECTED) summary = options.filter(([key]) => selected.includes(key)).map(([, label]) => label).join(', ');
     else summary = `${selected.length} selected`;
 
     useEffect(() => {
@@ -680,14 +681,16 @@ function Pagination({ list, setPage }: {
                     <span className="leading-none text-base">&lsaquo;</span>
                 </PageButton>
                 {showPages.map((page, i) => {
-                    if (page === '\u2026') return (
-                        <span
-                            className="px-3 py-2 text-zinc-500"
-                            key={`e${i}`}
-                        >
-                            &hellip;
-                        </span>
-                    );
+                    if (page === '\u2026') {
+                        return (
+                            <span
+                                className="px-3 py-2 text-zinc-500"
+                                key={`e${i}`}
+                            >
+                                &hellip;
+                            </span>
+                        );
+                    }
 
                     return (
                         <PageButton
@@ -889,7 +892,7 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         setTarget({ kind, track });
     }
 
-    function onKeyDown(e: KeyboardEvent) {
+    function handleKeyDown(e: KeyboardEvent) {
         if (e.key === 'Escape' && target && state !== 'success') close();
     }
 
@@ -902,9 +905,9 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
     }, [target]);
 
     useEffect(() => {
-        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keydown', handleKeyDown);
 
-        return () => window.removeEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [close, state, target]);
 
     return (

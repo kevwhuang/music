@@ -69,6 +69,6 @@ user-invocable: true
 
 ## Compatibility
 
-- Browsers: Chrome, Firefox, Safari, Edge
+- Browsers: Chrome, Firefox, Safari, and Edge
 - Mobile: iOS and Android
-- Inputs: mouse, touch, keyboard
+- Inputs: mouse, touch, and keyboard

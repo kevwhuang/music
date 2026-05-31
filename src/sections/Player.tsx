@@ -196,7 +196,7 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
 
         const tagName = target.tagName.toLowerCase();
 
-        if (target.isContentEditable || tagName === 'a' || tagName === 'button') return;
+        if (tagName === 'a' || tagName === 'button' || target.isContentEditable) return;
         if (tagName === 'input' || tagName === 'select' || tagName === 'textarea') return;
 
         const role = target.getAttribute('role');

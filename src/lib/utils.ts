@@ -3,7 +3,8 @@ export function buildSlug(id: string, title: string): string {
         .toLowerCase()
         .replace(/&/g, 'and')
         .replace(/['()]/g, '')
-        .replace(/\s+/g, '_');
+        .replace(/\s+/g, '_')
+        .replace(/_$/, '');
 }
 
 export function categoryLabel(category: Track['category']): string {

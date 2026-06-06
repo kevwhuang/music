@@ -12,23 +12,22 @@ import { buildSlug, categoryLabel, formatDetails } from '@lib/utils';
 import { usePlayer } from '@lib/store';
 
 type CategoryFilter = Record<Track['category'], boolean>;
+type TrackListState = ReturnType<typeof useTrackList>;
 
-type FavoriteFilter = {
+interface FavoriteFilter {
     heart: boolean;
     star: boolean;
-};
+}
 
-type PinModalTarget = {
+interface PinModalTarget {
     kind: 'master' | 'mixdown';
     track: Track;
-};
+}
 
-type SortConfig = {
+interface SortConfig {
     direction: 'asc' | 'desc';
     field: 'duration' | 'id' | 'title';
-};
-
-type TrackListState = ReturnType<typeof useTrackList>;
+}
 
 const BPM_MAX = 180;
 const BPM_MIN = 50;
@@ -297,13 +296,15 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
     useEffect(() => {
         if (!sectionRef.current) return;
 
-        gsap.from(sectionRef.current, {
+        const tween = gsap.from(sectionRef.current, {
             duration: ENTRANCE_DURATION,
             ease: 'power3.out',
             opacity: 0,
             scrollTrigger: { start: 'top 60%', trigger: sectionRef.current },
             y: ENTRANCE_Y,
         });
+
+        return () => tween.scrollTrigger?.kill();
     }, []);
 
     return (
@@ -726,8 +727,8 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
 }) {
     const formRef = useRef<HTMLFormElement>(null);
     const pinInputId = useId();
-    const titleId = useId();
     const slug = buildSlug(target.track.id, target.track.data.title);
+    const titleId = useId();
 
     function handleKeyDown(e: KeyboardEvent) {
         if (e.key !== 'Tab' || !formRef.current) return;
@@ -908,7 +909,7 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
         window.addEventListener('keydown', handleKeyDown);
 
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [close, state, target]);
+    }, [state, target]);
 
     return (
         <PinModalContext.Provider value={{ close, open }}>

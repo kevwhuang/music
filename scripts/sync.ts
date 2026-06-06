@@ -28,6 +28,7 @@ function extractPeaks(audioPath: string): number[] {
 
     for (let i = 0; i < WAVEFORM_BARS; i++) {
         const start = i * binSize;
+
         const end = i === WAVEFORM_BARS - 1 ? samples.length : start + binSize;
 
         let sum = 0;

@@ -2,16 +2,16 @@
     box-shadow: inset 0 1px 0 var(--color-white-20);
 }
 
-.catalog__body > .catalog__row--playing:not(.catalog__row--disabled):hover {
-    background: var(--color-orange-40);
-}
-
 .catalog__body > .catalog__row:not(.catalog__row--disabled):hover {
     background: var(--color-white-20);
 }
 
 .catalog__body > .catalog__row:not(.catalog__row--disabled):not(.catalog__row--playing):active:not(:has(.catalog__download:active)) {
     background: var(--color-white-40);
+}
+
+.catalog__body > .catalog__row--playing:not(.catalog__row--disabled):hover {
+    background: var(--color-orange-40);
 }
 
 .catalog__category--active {
@@ -305,6 +305,16 @@
     animation: player__center-pulse 2s ease-in-out infinite;
 }
 
+@keyframes catalog__vu-bounce {
+    0%, 100% {
+        transform: scaleY(0.3);
+    }
+
+    50% {
+        transform: scaleY(1);
+    }
+}
+
 @keyframes modal__fade-in {
     from {
         opacity: 0;
@@ -354,15 +364,5 @@
 @keyframes player__reel-spin {
     to {
         transform: rotate(360deg);
-    }
-}
-
-@keyframes player__vu-bounce {
-    0%, 100% {
-        transform: scaleY(0.3);
-    }
-
-    50% {
-        transform: scaleY(1);
     }
 }

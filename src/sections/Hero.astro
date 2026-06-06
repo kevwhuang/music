@@ -113,8 +113,8 @@ const stats = [
 
         gsap.set(words, { opacity: 1, x: distance });
 
-        const skipEntrance = window.scrollY > 0
-            || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const skipEntrance = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            || window.scrollY > 0;
 
         if (skipEntrance) {
             lines.forEach(line => gsap.set(line, { opacity: 1 }));

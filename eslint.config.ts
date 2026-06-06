@@ -10,7 +10,7 @@ const ignores = {
 
 const overrides = {
     files: ['**/*.astro', '**/*.astro/*.ts'],
-    languageOptions: { globals: { Track: true } },
+    languageOptions: { globals: { PinModalActions: true, Track: true } },
     rules: {
         '@stylistic/jsx-one-expression-per-line': 'off',
         '@stylistic/operator-linebreak': 'off',

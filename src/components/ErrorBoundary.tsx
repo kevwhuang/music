@@ -8,8 +8,6 @@ export class ErrorBoundary extends Component<{ children: React.ReactNode }, { ha
     }
 
     render() {
-        if (this.state.hasError) return null;
-
-        return this.props.children;
+        return this.state.hasError ? null : this.props.children;
     }
 }

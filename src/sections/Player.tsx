@@ -75,8 +75,7 @@ function renderTicks(duration: number) {
 function useCurrentTrack(): Track | null {
     const player = usePlayer();
 
-    if (!player.trackId) return null;
-    return allTracks.find(track => track.id === player.trackId) ?? null;
+    return player.trackId ? allTracks.find(track => track.id === player.trackId) ?? null : null;
 }
 
 function useVULevels() {
@@ -86,8 +85,8 @@ function useVULevels() {
     const wasZeroRef = useRef(true);
 
     function tick() {
-        const [rawLeft, rawRight] = playerStore.getLevels();
         const previous = smoothRef.current;
+        const [rawLeft, rawRight] = playerStore.getLevels();
 
         const left = Math.max(rawLeft, previous[0] * VU_DECAY);
         const right = Math.max(rawRight, previous[1] * VU_DECAY);

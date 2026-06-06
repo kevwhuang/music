@@ -71,7 +71,7 @@ function PlayingDots({ paused }: { paused: boolean }) {
                 <div
                     className="h-3.5 w-0.5 bg-orange-80 origin-center"
                     key={i}
-                    style={{ animation: `player__vu-bounce ${BOUNCE_DURATION}s ease-in-out ${i * BOUNCE_STAGGER}s infinite`, animationPlayState: paused ? 'paused' : 'running' }}
+                    style={{ animation: `catalog__vu-bounce ${BOUNCE_DURATION}s ease-in-out ${i * BOUNCE_STAGGER}s infinite`, animationPlayState: paused ? 'paused' : 'running' }}
                 />
             ))}
         </div>
@@ -102,7 +102,7 @@ export function CatalogRow({ isActive, isPlaying, pinModal, track }: {
 
     return (
         <div
-            className={`catalog__row ${isActive ? 'catalog__row--playing' : ''} ${hasMaster ? '' : 'catalog__row--disabled'} grid items-center gap-6 px-5 py-6 text-base delay-[0.01s] duration-150 transition-[background] ${hasMaster ? 'cursor-pointer' : ''}`}
+            className={`catalog__row ${isActive ? 'catalog__row--playing' : ''} ${hasMaster ? '' : 'catalog__row--disabled'} grid items-center gap-6 px-5 py-6 text-base delay-[10ms] duration-150 transition-[background] ${hasMaster ? 'cursor-pointer' : ''}`}
             {...(hasMaster ? { onClick: handleSelect, onKeyDown: handleKeyDown, role: 'button', tabIndex: 0 } : { role: 'listitem' })}
         >
             <div className="flex items-center justify-center">

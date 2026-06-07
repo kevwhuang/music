@@ -62,7 +62,7 @@ function allYears(tracks: Track[]) {
         years.add(track.data.year);
     }
 
-    return [...years].sort((a, b) => a - b);
+    return [...years].sort((a, b) => b - a);
 }
 
 function downloadTrack(target: PinModalTarget) {
@@ -285,11 +285,17 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
         trackList.setPage(page);
 
         if (headingRef.current) {
-            const playerHeight = document.querySelector<HTMLElement>('[aria-label="Audio player"]')?.offsetHeight ?? 0;
+            const playerHeight = document.querySelector<HTMLElement>('.player')?.offsetHeight ?? 0;
+            const scroll = { y: window.scrollY };
 
-            const top = headingRef.current.getBoundingClientRect().top + window.scrollY - playerHeight;
+            const top = headingRef.current.getBoundingClientRect().top + scroll.y - playerHeight;
 
-            window.scrollTo({ behavior: 'smooth', top });
+            gsap.to(scroll, {
+                duration: 0.6,
+                ease: 'power2.inOut',
+                onUpdate: () => window.scrollTo(0, scroll.y),
+                y: top,
+            });
         }
     }
 
@@ -410,7 +416,7 @@ function FavoriteChip({ active, icon, label, onClick, variant }: {
 
     return (
         <button
-            className={`catalog__favorite flex items-center justify-center h-9 w-9 border rounded-sm cursor-pointer duration-150 transition-[background,border-color,color] ${active ? `${activeClass} text-black` : `bg-transparent border-white-20 ${textClass}`}`}
+            className={`catalog__favorite flex items-center justify-center h-9 w-9 border rounded-sm duration-150 transition-[background,border-color,color] cursor-pointer ${active ? `${activeClass} text-black` : `bg-transparent border-white-20 ${textClass}`}`}
             aria-label={label}
             aria-pressed={active}
             onClick={onClick}
@@ -457,7 +463,7 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
                         <Fragment key={category}>
                             {i > 0 && <div className="w-px my-2 bg-zinc-700" aria-hidden="true" />}
                             <button
-                                className={`catalog__category ${list.categories[category] ? 'catalog__category--active' : 'text-zinc-400'} px-4 py-2.5 border-0 text-sm tracking-[0.2em] cursor-pointer duration-150 transition-[background,color,opacity]`}
+                                className={`catalog__category ${list.categories[category] ? 'catalog__category--active' : 'text-zinc-400'} px-4 py-2.5 border-0 text-sm tracking-[0.2em] duration-150 transition-[background,color,opacity] cursor-pointer`}
                                 aria-pressed={list.categories[category]}
                                 onClick={() => list.setCategories({ ...list.categories, [category]: !list.categories[category] })}
                             >
@@ -549,7 +555,7 @@ function MultiSelect<T extends number | string>({ label, onChange, options, plac
         >
             <span className="text-xs tracking-[0.2em] text-zinc-400">{label}</span>
             <button
-                className={`active:opacity-70 flex items-center justify-between px-4 py-2.5 border rounded-sm text-base text-left bg-zinc-900 cursor-pointer duration-150 select-none transition-[border-color] ${open ? 'border-orange-80' : 'border-transparent hover:border-orange-80'} ${selected.length ? 'text-white' : 'text-white-60'}`}
+                className={`active:opacity-70 flex items-center justify-between px-4 py-2.5 border rounded-sm text-base text-left bg-zinc-900 duration-150 transition-[border-color] cursor-pointer select-none ${open ? 'border-orange-80' : 'border-transparent hover:border-orange-80'} ${selected.length ? 'text-white' : 'text-white-60'}`}
                 aria-expanded={open}
                 aria-haspopup="listbox"
                 aria-label={`${label.charAt(0)}${label.slice(1).toLowerCase()} filter`}
@@ -646,7 +652,7 @@ function PageButton({ active, children, disabled, label, onClick }: {
 }) {
     return (
         <button
-            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-3 py-2 border border-zinc-700 rounded-sm font-medium text-sm bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} duration-150 select-none transition-[background,border-color,color,opacity] ${!active && !disabled ? 'cursor-pointer' : ''}`}
+            className={`catalog__page ${active ? 'catalog__page--active cursor-default' : ''} min-w-9 px-3 py-2 border border-zinc-700 rounded-sm font-medium text-sm bg-transparent ${!active && !disabled ? 'text-zinc-400' : ''} ${disabled ? 'text-zinc-500' : ''} duration-150 transition-[background,border-color,color,opacity] select-none ${!active && !disabled ? 'cursor-pointer' : ''}`}
             aria-label={label}
             disabled={disabled}
             onClick={onClick}
@@ -943,7 +949,7 @@ function SortHeader({ align, field, label, list }: {
     return (
         <span className={align === 'right' ? 'text-right' : ''}>
             <button
-                className={`catalog__sort ${isActive ? 'catalog__sort--active' : ''} inline-flex items-center gap-1 border-none bg-transparent cursor-pointer duration-150 transition-[color] ${isActive ? '' : 'text-zinc-400'}`}
+                className={`catalog__sort ${isActive ? 'catalog__sort--active' : ''} inline-flex items-center gap-1 border-none bg-transparent duration-150 transition-[color] cursor-pointer ${isActive ? '' : 'text-zinc-400'}`}
                 aria-label={isActive ? `Sort by ${label.toLowerCase()}, ${list.sort.direction === 'asc' ? 'ascending' : 'descending'}` : `Sort by ${label.toLowerCase()}`}
                 onClick={handleClick}
             >

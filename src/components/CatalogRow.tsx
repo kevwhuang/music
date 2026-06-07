@@ -15,7 +15,7 @@ function DownloadButton({ children, disabled, onClick }: {
 }) {
     return (
         <button
-            className="catalog__download px-3 py-2 border border-zinc-700 rounded-sm font-medium text-xs tracking-[0.2em] bg-transparent text-zinc-400 cursor-pointer duration-150 transition-[background,border-color,color,opacity]"
+            className="catalog__download px-3 py-2 border border-zinc-700 rounded-sm font-medium text-xs tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
             disabled={disabled}
             onClick={onClick}
         >
@@ -51,7 +51,7 @@ function DownloadLink({ children, disabled, href }: {
 
     return (
         <a
-            className="catalog__download inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 cursor-pointer duration-150 transition-[background,border-color,color,opacity]"
+            className="catalog__download inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
             download
             href={href}
             onClick={handleClick}

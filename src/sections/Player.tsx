@@ -246,7 +246,7 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
         >
             <div className="flex items-center gap-6 px-10 py-4">
                 <button
-                    className="player__collapse flex items-center justify-center rounded-full cursor-pointer duration-150 transition-opacity"
+                    className="player__collapse flex items-center justify-center rounded-full duration-150 transition-opacity cursor-pointer"
                     aria-expanded={!player.collapsed}
                     aria-label={player.collapsed ? 'Expand player' : 'Collapse player'}
                     onClick={() => playerStore.set({ collapsed: !player.collapsed })}
@@ -407,7 +407,7 @@ function TransportButton({ active, children, disabled, label, onClick }: {
 }) {
     return (
         <button
-            className={`player__transport ${active ? 'player__transport--active' : ''} flex items-center justify-center h-9 w-9 rounded-sm cursor-pointer duration-150 transition-[border-color,color,opacity]`}
+            className={`player__transport ${active ? 'player__transport--active' : ''} flex items-center justify-center h-9 w-9 rounded-sm duration-150 transition-[border-color,color,opacity] cursor-pointer`}
             aria-label={label}
             disabled={disabled}
             onClick={onClick}

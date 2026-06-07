@@ -10,7 +10,7 @@ type RawTrack = Pick<Track, 'data' | 'flags'>;
 const CATEGORIES = ['music', 'productions', 'sessions'] as const;
 const CONTENT_PATH = 'src/content';
 
-function categoryFromId(id: string): Track['category'] {
+function categoryFromId(id: string) {
     const prefix = id.charAt(0).toUpperCase();
 
     if (prefix === 'A') return 'music';

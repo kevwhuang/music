@@ -15,7 +15,7 @@ function DownloadButton({ children, disabled, onClick }: {
 }) {
     return (
         <button
-            className="catalog__download px-3 py-2 border border-zinc-700 rounded-sm font-medium text-xs tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
+            className="catalog__download px-3 py-2 border border-zinc-700 rounded-sm font-medium text-xs tracking-[0.2em] uppercase bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
             disabled={disabled}
             onClick={onClick}
         >
@@ -45,13 +45,13 @@ function DownloadLink({ children, disabled, href }: {
 
     if (disabled || cooldown) {
         return (
-            <span className="inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 opacity-40 cursor-not-allowed">{children}</span>
+            <span className="inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] uppercase bg-transparent text-zinc-400 opacity-40 cursor-not-allowed">{children}</span>
         );
     }
 
     return (
         <a
-            className="catalog__download inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
+            className="catalog__download inline-block px-3 py-2 border border-zinc-700 rounded-sm font-medium no-underline text-xs tracking-[0.2em] uppercase bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] cursor-pointer"
             download
             href={href}
             onClick={handleClick}
@@ -158,7 +158,7 @@ export function CatalogRow({ isActive, isPlaying, pinModal, track }: {
                     disabled={!hasMixdown}
                     onClick={() => pinModal.open(track, 'mixdown')}
                 >
-                    MIX
+                    Mix
                 </DownloadButton>
             </div>
         </div>

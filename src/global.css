@@ -33,18 +33,37 @@
     --color-zinc-950: #09090b;
     --font-inter: 'Inter', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-    --font-sans: 'Geist', system-ui, sans-serif;
+    --font-sans: 'Geist Sans', system-ui, sans-serif;
+}
+
+a,
+button,
+label,
+select {
+    cursor: pointer;
 }
 
 body {
     animation: body__fade-in 0.5s ease forwards;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
+html[data-astro-transition] {
+    scroll-behavior: auto;
+}
+
+:disabled {
+    cursor: not-allowed;
+}
+
 :focus {
     outline: none;
 }
 
-:focus-visible:not(input) {
+:focus-visible:not(input, select, textarea) {
     border-radius: 2px;
     outline: 2px solid var(--color-orange-80);
     outline-offset: 2px;
@@ -54,13 +73,19 @@ body {
     user-select: none;
 }
 
+::selection {
+    background: var(--color-orange-20);
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
-    *::before,
-    *::after {
+    *::after,
+    *::before {
+        animation-delay: 0s !important;
         animation-duration: 0.01s !important;
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
+        transition-delay: 0s !important;
         transition-duration: 0.01s !important;
     }
 }

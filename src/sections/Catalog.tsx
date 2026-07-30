@@ -352,16 +352,16 @@ function CatalogInner({ tracks }: { tracks: Track[] }) {
                         />
                         <SortHeader
                             field="title"
-                            label="TITLE"
+                            label="Title"
                             list={trackList}
                         />
                         <SortHeader
                             align="right"
                             field="duration"
-                            label="LENGTH"
+                            label="Length"
                             list={trackList}
                         />
-                        <span className="pl-4 text-left">DOWNLOAD</span>
+                        <span className="pl-4 text-left uppercase">Download</span>
                     </div>
                     <div className="catalog__body col-span-full grid grid-cols-subgrid border border-t-0 border-zinc-800">
                         {trackList.visible.length === 0 && (
@@ -398,8 +398,8 @@ function DownloadChip({ children, kind }: {
 }) {
     return (
         <div className="text-xs">
-            <div className="mb-2 tracking-[0.2em] text-zinc-400">
-                {kind === 'master' ? 'MASTER' : 'MIXDOWN'}
+            <div className="mb-2 tracking-[0.2em] uppercase text-zinc-400">
+                {kind === 'master' ? 'Master' : 'Mixdown'}
             </div>
             <div className="px-4 py-2.5 border border-zinc-700 break-all leading-tight text-zinc-100">
                 {children}
@@ -491,14 +491,14 @@ function Filters({ list, tracks }: { list: TrackListState; tracks: Track[] }) {
             </div>
             <div className="grid grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_240px] items-end gap-4">
                 <MultiSelect
-                    label="YEAR"
+                    label="Year"
                     onChange={list.setYears}
                     options={allYears(tracks).map(year => [year, String(year)] as [number, string])}
                     placeholder="All"
                     selected={list.years}
                 />
                 <MultiSelect
-                    label="KEY"
+                    label="Key"
                     onChange={list.setKeys}
                     options={allKeys(tracks).map(key => [key, key] as [string, string])}
                     placeholder="All"
@@ -553,7 +553,7 @@ function MultiSelect<T extends number | string>({ label, onChange, options, plac
             className="flex flex-col relative gap-2"
             ref={containerRef}
         >
-            <span className="text-xs tracking-[0.2em] text-zinc-400">{label}</span>
+            <span className="text-xs tracking-[0.2em] uppercase text-zinc-400">{label}</span>
             <button
                 className={`active:opacity-70 flex items-center justify-between px-4 py-2.5 border rounded-sm text-base text-left bg-zinc-900 duration-150 transition-[border-color] cursor-pointer select-none ${open ? 'border-orange-80' : 'border-transparent hover:border-orange-80'} ${selected.length ? 'text-white' : 'text-white-60'}`}
                 aria-expanded={open}
@@ -596,11 +596,11 @@ function MultiSelectPopover<T extends number | string>({ onChange, options, sele
                     selected
                 </span>
                 <button
-                    className={`active:opacity-70 hover:opacity-80 border-none text-xs tracking-[0.2em] bg-transparent cursor-pointer ${selected.length ? 'text-orange-80' : 'text-white-40'}`}
+                    className={`active:opacity-70 hover:opacity-80 border-none text-xs tracking-[0.2em] uppercase bg-transparent cursor-pointer ${selected.length ? 'text-orange-80' : 'text-white-40'}`}
                     disabled={!selected.length}
                     onClick={() => onChange([])}
                 >
-                    CLEAR
+                    Clear
                 </button>
             </div>
             <input
@@ -674,9 +674,9 @@ function Pagination({ list, setPage }: {
 
     return (
         <div className="flex items-center justify-between px-5 text-sm tracking-[0.2em]">
-            <span className="text-zinc-400">
+            <span className="uppercase text-zinc-400">
                 {list.total === 0 ? '0' : `${list.page * PAGE_SIZE + 1}\u2013${Math.min((list.page + 1) * PAGE_SIZE, list.total)}`}
-                {' OF '}
+                {' of '}
                 {list.total}
             </span>
             <div className="flex gap-1">
@@ -822,19 +822,19 @@ function PinModalDialog({ close, inputRef, pin, setPin, state, submit, target }:
                 </div>
                 <div className="flex gap-2">
                     <button
-                        className={`enabled:active:opacity-70 enabled:hover:opacity-90 flex-[2] px-4 py-2.5 border-none font-medium text-sm tracking-[0.2em] bg-orange-80 text-white duration-150 transition-[background,opacity] ${state === 'checking' || state === 'success' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        className={`enabled:active:opacity-70 enabled:hover:opacity-90 flex-[2] px-4 py-2.5 border-none font-medium text-sm tracking-[0.2em] uppercase bg-orange-80 text-white duration-150 transition-[background,opacity] ${state === 'checking' || state === 'success' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                         disabled={state === 'checking' || state === 'success'}
                         type="submit"
                     >
-                        {state === 'checking' ? 'VERIFYING\u2026' : 'DOWNLOAD'}
+                        {state === 'checking' ? 'Verifying\u2026' : 'Download'}
                     </button>
                     <button
-                        className={`enabled:active:opacity-70 enabled:hover:bg-white-20 enabled:hover:border-orange-80 enabled:hover:text-orange-80 flex-1 px-4 py-2.5 border border-zinc-700 text-sm tracking-[0.2em] bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] ${state === 'success' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                        className={`enabled:active:opacity-70 enabled:hover:bg-white-20 enabled:hover:border-orange-80 enabled:hover:text-orange-80 flex-1 px-4 py-2.5 border border-zinc-700 text-sm tracking-[0.2em] uppercase bg-transparent text-zinc-400 duration-150 transition-[background,border-color,color,opacity] ${state === 'success' ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                         disabled={state === 'success'}
                         onClick={close}
                         type="button"
                     >
-                        CANCEL
+                        Cancel
                     </button>
                 </div>
             </form>
@@ -949,7 +949,7 @@ function SortHeader({ align, field, label, list }: {
     return (
         <span className={align === 'right' ? 'text-right' : ''}>
             <button
-                className={`catalog__sort ${isActive ? 'catalog__sort--active' : ''} inline-flex items-center gap-1 border-none bg-transparent duration-150 transition-[color] cursor-pointer ${isActive ? '' : 'text-zinc-400'}`}
+                className={`catalog__sort ${isActive ? 'catalog__sort--active' : ''} inline-flex items-center gap-1 border-none uppercase bg-transparent duration-150 transition-[color] cursor-pointer ${isActive ? '' : 'text-zinc-400'}`}
                 aria-label={isActive ? `Sort by ${label.toLowerCase()}, ${list.sort.direction === 'asc' ? 'ascending' : 'descending'}` : `Sort by ${label.toLowerCase()}`}
                 onClick={handleClick}
             >

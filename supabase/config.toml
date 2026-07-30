@@ -1,0 +1,4 @@
+project_id = "music"
+
+[analytics]
+enabled = false

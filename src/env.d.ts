@@ -2,6 +2,11 @@
 
 declare module 'eslint-plugin-jsx-a11y';
 
+interface ImportMetaEnv {
+    readonly SUPABASE_PUBLISHABLE_KEY: string;
+    readonly SUPABASE_URL: string;
+}
+
 interface PinModalActions {
     close: () => void;
     open: (track: Track, kind: 'master' | 'mixdown') => void;

@@ -180,7 +180,7 @@ function Fader({ label, onChange, resetValue, value }: {
                     />
                 ))}
             </div>
-            <span className="font-semibold text-xs tracking-[0.2em] text-cream-60">{label}</span>
+            <span className="font-semibold text-xs tracking-[0.2em] uppercase text-cream-60">{label}</span>
         </div>
     );
 }
@@ -278,7 +278,7 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
                         {track ? track.data.title : 'Select a track'}
                     </div>
                     <div className="text-xs tracking-[0.2em] text-cream-60">
-                        {track ? formatDetails(track) : 'NO TAPE LOADED'}
+                        {track ? formatDetails(track) : <span className="uppercase">No tape loaded</span>}
                     </div>
                 </div>
                 <div
@@ -311,7 +311,7 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
                         />
                     </div>
                     <Fader
-                        label="VOL"
+                        label="Vol"
                         onChange={volume => playerStore.set({ volume })}
                         resetValue={1}
                         value={player.volume}

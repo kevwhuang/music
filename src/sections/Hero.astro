@@ -8,10 +8,10 @@ const { tracks } = Astro.props;
 const TICKER = ['ideate', 'sample', 'synthesize', 'record', 'compose', 'arrange', 'produce', 'mix', 'master', 'publish'];
 
 const stats = [
-    { count: tracks.filter(track => track.category === 'music').length, label: 'MUSIC' },
-    { count: tracks.filter(track => track.category === 'sessions').length, label: 'SESSIONS' },
-    { count: tracks.filter(track => track.category === 'productions').length, label: 'PRODUCTIONS' },
-    { accent: true, count: tracks.filter(track => track.flags.star).length, label: 'STARRED' },
+    { count: tracks.filter(track => track.category === 'music').length, label: 'Music' },
+    { count: tracks.filter(track => track.category === 'sessions').length, label: 'Sessions' },
+    { count: tracks.filter(track => track.category === 'productions').length, label: 'Productions' },
+    { accent: true, count: tracks.filter(track => track.flags.star).length, label: 'Starred' },
 ];
 ---
 
@@ -45,12 +45,12 @@ const stats = [
                 to master.
             </span>
         </h1>
-        <p class="hero__tagline mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] text-zinc-300 opacity-0">
-            PRODUCER AND ENGINEER. A DECADE OF CRAFT. <span class="text-orange-80">5M+ STREAMS.</span>
+        <p class="hero__tagline mb-20 font-mono leading-relaxed text-xl tracking-[0.2em] uppercase text-zinc-300 opacity-0">
+            Producer and engineer. A decade of craft. <span class="text-orange-80">5M+ streams.</span>
             <br />
-            MINIMAL SETUP. MAXIMUM SIGNAL. UNTETHERED FROM GENRE.
+            Minimal setup. Maximum signal. Untethered from genre.
             <br />
-            BASED IN <span class="text-orange-80">AUSTIN.</span> OPEN TO COLLAB.
+            Based in <span class="text-orange-80">Austin.</span> Open to collab.
         </p>
         <div class="hero__stats relative opacity-0">
             <div
@@ -64,7 +64,7 @@ const stats = [
             <dl class="grid grid-cols-4 gap-8 p-6 border border-zinc-800 bg-zinc-800">
                 {stats.map(({ accent, count, label }, i) => (
                     <div class={`pl-5 ${i ? 'border-l-2 border-zinc-700' : ''} text-center`}>
-                        <dt class="mb-2 font-mono text-xs tracking-[0.2em] text-zinc-400">{label}</dt>
+                        <dt class="mb-2 font-mono text-xs tracking-[0.2em] uppercase text-zinc-400">{label}</dt>
                         <dd class:list={['font-inter font-medium leading-none text-4xl tracking-[-0.025em]', accent ? 'text-orange-80' : 'text-zinc-100']}>{count}</dd>
                     </div>
                 ))}

@@ -28,6 +28,7 @@ export default async function (_request: Request, context: Context) {
     }
 
     timestamps.push(now);
+
     await store.setJSON(ip, timestamps);
 
     return context.next();

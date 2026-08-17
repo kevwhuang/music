@@ -121,6 +121,7 @@ const stats = [
             gsap.set(stats, { opacity: 1 });
             gsap.set(tagline, { opacity: 1 });
             cycle(distance, words);
+
             return;
         }
 
@@ -181,6 +182,7 @@ const stats = [
         for (const char of text) {
             if (char === ' ') {
                 element.appendChild(document.createTextNode(' '));
+
                 continue;
             }
 

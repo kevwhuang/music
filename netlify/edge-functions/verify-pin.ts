@@ -64,6 +64,7 @@ export default async function (request: Request, context: Context) {
 
     if (!isDev) {
         timestamps.push(now);
+
         await store.setJSON(ip, timestamps);
     }
 

@@ -137,6 +137,7 @@ function filterTracks(
 
         if (valueA < valueB) return -direction;
         if (valueA > valueB) return direction;
+
         return 0;
     });
 
@@ -881,6 +882,7 @@ function PinModalProvider({ children }: { children: React.ReactNode }) {
 
             if (!ok) {
                 setState('error');
+
                 return;
             }
 

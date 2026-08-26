@@ -31,9 +31,9 @@
     --color-zinc-800: #27272a;
     --color-zinc-900: #18181b;
     --color-zinc-950: #09090b;
-    --font-inter: 'Inter', system-ui, sans-serif;
-    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-    --font-sans: 'Geist Sans', system-ui, sans-serif;
+    --font-inter: var(--font-inter);
+    --font-mono: var(--font-ibm-plex-mono);
+    --font-sans: var(--font-geist-sans);
 }
 
 a,

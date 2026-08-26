@@ -275,10 +275,10 @@ function PlayerInner({ tracks }: { tracks: Track[] }) {
                     aria-live="polite"
                 >
                     <div className={`mb-0.5 font-inter font-medium leading-tight text-2xl tracking-[-0.01em] truncate ${track ? 'text-cream' : 'text-cream-40'}`}>
-                        {track ? track.data.title : 'Select a track'}
+                        {track ? track.data.title : 'Select a track.'}
                     </div>
                     <div className="text-xs tracking-[0.2em] text-cream-60">
-                        {track ? formatDetails(track) : <span className="uppercase">No tape loaded</span>}
+                        {track ? formatDetails(track) : <span className="uppercase">No tape loaded.</span>}
                     </div>
                 </div>
                 <div

@@ -21,7 +21,7 @@ export default async function (_request: Request, context: Context) {
     if (timestamps.length >= MAX_REQUESTS) {
         const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1_000);
 
-        return new Response('Rate limit exceeded', {
+        return new Response('Rate limit exceeded.', {
             headers: { 'Retry-After': String(retryAfter) },
             status: 429,
         });

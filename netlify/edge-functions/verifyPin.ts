@@ -28,13 +28,13 @@ export default async function (request: Request, context: Context) {
         if (timestamps.length >= MAX_ATTEMPTS) {
             const retryAfter = Math.ceil((timestamps[0] + WINDOW_MS - now) / 1_000);
 
-            return json({ error: 'rate_limit', ok: false }, { 'Retry-After': String(retryAfter) }, 429);
+            return json({ error: 'Rate limit exceeded.', ok: false }, { 'Retry-After': String(retryAfter) }, 429);
         }
     }
 
     const secret = Netlify.env.get('DOWNLOAD_PIN') ?? '';
 
-    if (!secret) return json({ error: 'not_configured', ok: false }, {}, 503);
+    if (!secret) return json({ error: 'Pin not configured.', ok: false }, {}, 503);
 
     const rawBody = await request.text().catch(() => '');
 

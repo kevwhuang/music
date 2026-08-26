@@ -1,12 +1,6 @@
 ---
-import '@fontsource/geist-sans/400.css';
-import '@fontsource/geist-sans/600.css';
-import '@fontsource/ibm-plex-mono/400.css';
-import '@fontsource/ibm-plex-mono/500.css';
-import '@fontsource/ibm-plex-mono/600.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
 import { ClientRouter } from 'astro:transitions';
+import { Font } from 'astro:assets';
 
 import '@/global.css';
 import '@/styles.css';
@@ -88,10 +82,13 @@ const structuredData = {
         <meta content={ogImageUrl} name="twitter:image" />
         <meta content={title} name="twitter:title" />
         <script is:inline set:html={JSON.stringify(structuredData)} type="application/ld+json" />
+        <Font cssVariable="--font-geist-sans" preload />
+        <Font cssVariable="--font-ibm-plex-mono" preload />
+        <Font cssVariable="--font-inter" preload />
         <ClientRouter />
     </head>
     <body
-        class="flex flex-col min-h-svh antialiased font-sans bg-zinc-950 text-white"
+        class="flex flex-col min-h-svh antialiased bg-zinc-950 text-white"
         style="opacity: 0"
     >
         <main class="flex flex-1 flex-col">
